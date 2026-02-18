@@ -1,3 +1,6 @@
 {
-  "name": "saint-slack-oauth"
+  "name": "saint-slack-oauth",
+  "dependencies": {
+    "@vercel/kv": "^2.0.0"
+  }
 }
