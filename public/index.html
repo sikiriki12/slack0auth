@@ -101,20 +101,36 @@
     color: #3a3a3a;
   }
 
+  /* Identity row — CV style */
+  .identity-row {
+    display: flex;
+    gap: 1.25rem;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+  }
+
+  .identity-row .field {
+    flex: 1;
+    margin-bottom: 0;
+  }
+
   /* File Upload */
   .file-upload {
     position: relative;
-    width: 72px;
-    height: 72px;
-    border-radius: 16px;
-    border: 1px dashed var(--border);
+    width: 110px;
+    height: 110px;
+    min-width: 110px;
+    border-radius: 20px;
+    border: 2px dashed var(--border);
     overflow: hidden;
     cursor: pointer;
-    transition: border-color 0.2s;
+    transition: border-color 0.2s, background 0.2s;
   }
 
-  .file-upload:hover {
-    border-color: var(--border-focus);
+  .file-upload:hover,
+  .file-upload.dragover {
+    border-color: var(--accent);
+    background: var(--accent-dim);
   }
 
   .file-upload input {
@@ -126,13 +142,20 @@
 
   .file-upload .placeholder {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     width: 100%;
     height: 100%;
     color: var(--text-dim);
-    font-size: 1.5rem;
+    font-size: 0.65rem;
+    gap: 0.25rem;
     transition: opacity 0.2s;
+  }
+
+  .file-upload .placeholder span {
+    font-size: 1.5rem;
+    line-height: 1;
   }
 
   .file-upload img {
@@ -362,22 +385,23 @@
   <!-- Step 1: Create -->
   <div id="step-create" class="step active">
     <form id="create-form">
-      <div class="field">
-        <label for="name">Name</label>
-        <input type="text" id="name" name="name" placeholder="My Bot" required>
+      <div class="identity-row">
+        <div class="file-upload" id="file-upload">
+          <div class="placeholder">
+            <span>+</span>
+            Icon
+          </div>
+          <input type="file" id="icon" accept="image/*">
+        </div>
+        <div class="field">
+          <label for="name">Name</label>
+          <input type="text" id="name" name="name" placeholder="My Bot" required>
+        </div>
       </div>
 
       <div class="field">
         <label for="description">Description</label>
         <textarea id="description" name="description" placeholder="What does this bot do?"></textarea>
-      </div>
-
-      <div class="field">
-        <label>Icon</label>
-        <div class="file-upload" id="file-upload">
-          <div class="placeholder">+</div>
-          <input type="file" id="icon" accept="image/*">
-        </div>
       </div>
 
       <button type="submit" class="btn btn-primary btn-full" id="create-btn">
@@ -431,16 +455,42 @@
 <script>
   const state = { appId: null, installUrl: null };
 
-  // File upload preview
+  // File upload preview + drag & drop
   const fileUpload = document.getElementById('file-upload');
   const fileInput = document.getElementById('icon');
-  fileInput.addEventListener('change', () => {
-    const file = fileInput.files[0];
-    if (!file) return;
+
+  function showPreview(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    const existing = fileUpload.querySelector('img');
+    if (existing) existing.remove();
     const img = document.createElement('img');
     img.src = URL.createObjectURL(file);
     fileUpload.appendChild(img);
     fileUpload.classList.add('has-image');
+  }
+
+  fileInput.addEventListener('change', () => showPreview(fileInput.files[0]));
+
+  fileUpload.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    fileUpload.classList.add('dragover');
+  });
+
+  fileUpload.addEventListener('dragleave', () => {
+    fileUpload.classList.remove('dragover');
+  });
+
+  fileUpload.addEventListener('drop', (e) => {
+    e.preventDefault();
+    fileUpload.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      // Update the file input so it's accessible later
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInput.files = dt.files;
+      showPreview(file);
+    }
   });
 
   // Create form
