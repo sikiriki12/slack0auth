@@ -1,6 +1,4 @@
-export default async function handler(req, res) {
-  const { code } = req.query;
-
+export async function completeOAuth(code) {
   const response = await fetch('https://slack.com/api/oauth.v2.access', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -28,5 +26,11 @@ export default async function handler(req, res) {
 
   console.log(`New install: ${data.team.name} | Token: ${data.access_token}`);
 
+  return data;
+}
+
+export default async function handler(req, res) {
+  const { code } = req.query;
+  await completeOAuth(code);
   res.send('Installed! You can close this tab.');
 }
