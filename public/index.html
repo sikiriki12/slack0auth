@@ -634,11 +634,55 @@
     </div>
   </div>
 
-  <!-- Step 3: Placeholder -->
-  <div id="step-3-placeholder" class="step">
+  <!-- Step 3: Google Cloud OAuth -->
+  <div id="step-gcloud" class="step">
+    <div id="gcloud-loading" style="text-align: center; padding: 3rem 1rem;">
+      <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#9729;</div>
+      <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.5rem;">Google Cloud</h2>
+      <p style="font-size: 0.875rem; color: var(--text-dim);">Preparing authorization...</p>
+      <div style="margin-top: 1rem; display: flex; justify-content: center;"><div class="spinner"></div></div>
+    </div>
+
+    <div id="gcloud-ready" style="display: none;">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#9729;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Google Cloud</h2>
+        <p style="font-size: 0.875rem; color: var(--text-dim);">Authorize this agent's Google account</p>
+      </div>
+
+      <div class="field">
+        <label>Email</label>
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.9rem; color: var(--accent);" id="gcloud-email-display"></div>
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.9rem; color: var(--text); font-family: monospace; letter-spacing: 0.05em;" id="gcloud-password-display"></div>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="gcloud-auth-btn">
+        Authorize Google Account &rarr;
+      </button>
+      <div id="gcloud-error" class="error"></div>
+      <p id="gcloud-waiting" style="display: none; text-align: center; font-size: 0.8rem; color: var(--text-dim); margin-top: 1rem;">
+        Waiting for authorization...
+      </p>
+    </div>
+
+    <div id="gcloud-done" style="display: none;">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#9989;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Google Account Authorized</h2>
+        <p style="font-size: 0.9rem; color: var(--accent); margin-top: 0.5rem;" id="gcloud-done-email"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4: Placeholder -->
+  <div id="step-4-placeholder" class="step">
     <div class="placeholder-step">
-      <div class="icon">&#9729;</div>
-      <h2>Step 3: Google Cloud</h2>
+      <div class="icon">&#128241;</div>
+      <h2>Step 4: Phone Login</h2>
       <p>Coming soon</p>
     </div>
   </div>
@@ -1029,12 +1073,7 @@
       document.getElementById('gmail-done').style.display = '';
       document.getElementById('email-created-display').textContent = setup.step_data.email;
       // Auto-advance after a moment
-      setTimeout(() => {
-        buildStepper(2);
-        document.getElementById('step-gmail').classList.remove('active');
-        document.getElementById('step-3-placeholder').classList.add('active');
-        state.currentStep = 3;
-      }, 1500);
+      setTimeout(() => showGCloudStep(), 1500);
       return;
     }
 
@@ -1071,12 +1110,7 @@
       document.getElementById('email-created-display').textContent = data.email;
 
       // Advance to step 3 after a moment
-      setTimeout(() => {
-        buildStepper(2);
-        document.getElementById('step-gmail').classList.remove('active');
-        document.getElementById('step-3-placeholder').classList.add('active');
-        state.currentStep = 3;
-      }, 2000);
+      setTimeout(() => showGCloudStep(), 2000);
     } catch (error) {
       err.textContent = error.message;
       btn.disabled = false;
@@ -1084,15 +1118,110 @@
     }
   });
 
+  // === Step 3: Google Cloud OAuth ===
+
+  let gcloudPollTimer = null;
+
+  async function showGCloudStep() {
+    buildStepper(2);
+    document.querySelectorAll('.step.active').forEach((s) => s.classList.remove('active'));
+    document.getElementById('step-gcloud').classList.add('active');
+    state.currentStep = 3;
+
+    // Reset UI
+    document.getElementById('gcloud-loading').style.display = '';
+    document.getElementById('gcloud-ready').style.display = 'none';
+    document.getElementById('gcloud-done').style.display = 'none';
+
+    // Fetch setup data
+    const { data: setup } = await supabase
+      .from('agent_setups')
+      .select('step_data')
+      .eq('id', state.setupId)
+      .single();
+
+    // If already authorized, show done and advance
+    if (setup?.step_data?.google_oauth_token) {
+      document.getElementById('gcloud-loading').style.display = 'none';
+      document.getElementById('gcloud-done').style.display = '';
+      document.getElementById('gcloud-done-email').textContent = setup.step_data.email || '';
+      setTimeout(() => {
+        buildStepper(3);
+        document.getElementById('step-gcloud').classList.remove('active');
+        document.getElementById('step-4-placeholder').classList.add('active');
+        state.currentStep = 4;
+      }, 1500);
+      return;
+    }
+
+    // Get auth URL
+    try {
+      const res = await fetch('/api/agents/gcloud-auth-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setupId: state.setupId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to get auth URL');
+
+      // Show ready state
+      document.getElementById('gcloud-loading').style.display = 'none';
+      document.getElementById('gcloud-ready').style.display = '';
+      document.getElementById('gcloud-email-display').textContent = setup?.step_data?.email || '';
+      document.getElementById('gcloud-password-display').textContent = setup?.step_data?.email_password || '';
+
+      // Authorize button
+      const authBtn = document.getElementById('gcloud-auth-btn');
+      authBtn.onclick = () => {
+        window.open(data.authUrl);
+        document.getElementById('gcloud-waiting').style.display = '';
+        startGCloudPolling();
+      };
+    } catch (error) {
+      document.getElementById('gcloud-loading').style.display = 'none';
+      document.getElementById('gcloud-ready').style.display = '';
+      document.getElementById('gcloud-error').textContent = error.message;
+    }
+  }
+
+  function startGCloudPolling() {
+    if (gcloudPollTimer) clearInterval(gcloudPollTimer);
+    gcloudPollTimer = setInterval(async () => {
+      const { data: setup } = await supabase
+        .from('agent_setups')
+        .select('step_data')
+        .eq('id', state.setupId)
+        .single();
+
+      if (setup?.step_data?.google_oauth_token) {
+        clearInterval(gcloudPollTimer);
+        gcloudPollTimer = null;
+        // Show done state
+        document.getElementById('gcloud-ready').style.display = 'none';
+        document.getElementById('gcloud-done').style.display = '';
+        document.getElementById('gcloud-done-email').textContent = setup.step_data.email || '';
+        // Auto-advance after 2s
+        setTimeout(() => {
+          buildStepper(3);
+          document.getElementById('step-gcloud').classList.remove('active');
+          document.getElementById('step-4-placeholder').classList.add('active');
+          state.currentStep = 4;
+        }, 2000);
+      }
+    }, 2000);
+  }
+
   // Update continue handler for in-progress cards
   function continueSetup(setupId, step) {
     state.setupId = setupId;
     document.getElementById('step-landing').classList.remove('active');
     if (step === 1) {
       showGmailStep();
-    } else if (step >= 2) {
+    } else if (step === 2 || step === 3) {
+      showGCloudStep();
+    } else if (step >= 4) {
       buildStepper(step);
-      document.getElementById('step-3-placeholder').classList.add('active');
+      document.getElementById('step-4-placeholder').classList.add('active');
       state.currentStep = step + 1;
     }
   }
