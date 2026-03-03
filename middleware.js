@@ -1,5 +1,3 @@
-import { next } from '@vercel/edge';
-
 const PUBLIC_PATHS = ['/login', '/api/auth/login', '/favicon.ico'];
 
 export default async function middleware(request) {
@@ -7,7 +5,7 @@ export default async function middleware(request) {
 
   // Allow public paths through
   if (PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'))) {
-    return next();
+    return;
   }
 
   // Check for session cookie
@@ -21,7 +19,7 @@ export default async function middleware(request) {
 
   // Verify token is valid HMAC
   const password = process.env.SETUP_PASSWORD;
-  if (!password) return next(); // No password configured = no protection
+  if (!password) return; // No password configured = no protection
 
   const key = await crypto.subtle.importKey(
     'raw',
@@ -42,8 +40,6 @@ export default async function middleware(request) {
   if (token !== expected) {
     return Response.redirect(new URL('/login', request.url), 302);
   }
-
-  return next();
 }
 
 export const config = {
