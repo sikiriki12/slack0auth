@@ -686,29 +686,76 @@
     </div>
 
     <div id="gcloud-ready" style="display: none;">
-      <div style="text-align: center; margin-bottom: 2rem;">
-        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#9729;</div>
-        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Google Cloud</h2>
-        <p style="font-size: 0.875rem; color: var(--text-dim);">Authorize this agent's Google account</p>
+      <!-- Phone Google Sign-in Section -->
+      <div id="gcloud-phone-section">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#128241;</div>
+          <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Phone Google Sign-in</h2>
+          <p style="font-size: 0.875rem; color: var(--text-dim);">Sign into Google on the agent's phone</p>
+        </div>
+
+        <div class="field">
+          <label>Email</label>
+          <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.9rem; color: var(--accent);" id="gcloud-email-display"></div>
+        </div>
+
+        <div class="field">
+          <label>Password</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <div style="flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.9rem; color: var(--text); font-family: monospace; letter-spacing: 0.05em;" id="gcloud-password-display"></div>
+            <button class="btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('gcloud-password-display').textContent)" title="Copy password">Copy</button>
+          </div>
+        </div>
+
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.8rem; color: var(--text-mid); line-height: 1.6;">
+          <strong style="color: var(--text); display: block; margin-bottom: 0.5rem;">Instructions:</strong>
+          1. On the agent's phone go to <span style="color: var(--accent);">Settings &rarr; Google</span><br>
+          2. Tap <span style="color: var(--accent);">Add account</span><br>
+          3. Sign in with the email and password above<br>
+          4. Complete any verification prompts
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; text-transform: none; letter-spacing: 0; font-size: 0.85rem; color: var(--text-mid);">
+            <input type="checkbox" id="gcloud-phone-confirm" style="width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer;">
+            I've signed into the Gmail account on the phone
+          </label>
+        </div>
+
+        <button class="btn btn-primary btn-full" id="gcloud-phone-confirm-btn" disabled>
+          Confirm &amp; Continue to Authorization
+        </button>
       </div>
 
-      <div class="field">
-        <label>Email</label>
-        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.9rem; color: var(--accent);" id="gcloud-email-display"></div>
-      </div>
+      <!-- OAuth Section (hidden until phone sign-in confirmed) -->
+      <div id="gcloud-oauth-section" style="display: none;">
+        <div style="text-align: center; margin-bottom: 2rem;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#9729;</div>
+          <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Authorize Google Account</h2>
+          <p style="font-size: 0.875rem; color: var(--text-dim);">Grant workspace permissions via OAuth</p>
+        </div>
 
-      <div class="field">
-        <label>Password</label>
-        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.9rem; color: var(--text); font-family: monospace; letter-spacing: 0.05em;" id="gcloud-password-display"></div>
-      </div>
+        <div class="field">
+          <label>Email</label>
+          <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.9rem; color: var(--accent);" id="gcloud-oauth-email"></div>
+        </div>
 
-      <button class="btn btn-primary btn-full" id="gcloud-auth-btn">
-        Authorize Google Account &rarr;
-      </button>
-      <div id="gcloud-error" class="error"></div>
-      <p id="gcloud-waiting" style="display: none; text-align: center; font-size: 0.8rem; color: var(--text-dim); margin-top: 1rem;">
-        Waiting for authorization...
-      </p>
+        <div class="field">
+          <label>Password</label>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <div style="flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.9rem; color: var(--text); font-family: monospace; letter-spacing: 0.05em;" id="gcloud-oauth-password"></div>
+            <button class="btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('gcloud-oauth-password').textContent)" title="Copy password">Copy</button>
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-full" id="gcloud-auth-btn">
+          Authorize Google Account &rarr;
+        </button>
+        <div id="gcloud-error" class="error"></div>
+        <p id="gcloud-waiting" style="display: none; text-align: center; font-size: 0.8rem; color: var(--text-dim); margin-top: 1rem;">
+          Waiting for authorization...
+        </p>
+      </div>
     </div>
 
     <div id="gcloud-done" style="display: none;">
@@ -1244,7 +1291,67 @@
       return;
     }
 
-    // Get auth URL
+    // Show ready state
+    document.getElementById('gcloud-loading').style.display = 'none';
+    document.getElementById('gcloud-ready').style.display = '';
+    document.getElementById('gcloud-email-display').textContent = setup?.step_data?.email || '';
+    document.getElementById('gcloud-password-display').textContent = setup?.step_data?.email_password || '';
+
+    // If phone sign-in already confirmed (resume), skip to OAuth section
+    if (setup?.step_data?.phone_google_signed_in) {
+      document.getElementById('gcloud-phone-section').style.display = 'none';
+      showGCloudOAuthSection();
+    }
+  }
+
+  // Phone Google sign-in: enable confirm button when checkbox checked
+  document.getElementById('gcloud-phone-confirm').addEventListener('change', () => {
+    document.getElementById('gcloud-phone-confirm-btn').disabled = !document.getElementById('gcloud-phone-confirm').checked;
+  });
+
+  // Phone sign-in confirm button
+  document.getElementById('gcloud-phone-confirm-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('gcloud-phone-confirm-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Saving...';
+
+    try {
+      const { data: setup } = await supabase
+        .from('agent_setups')
+        .select('step_data')
+        .eq('id', state.setupId)
+        .single();
+
+      const res = await fetch('/api/agents/save-phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setupId: state.setupId,
+          phoneNumber: setup?.step_data?.phone_number || '',
+          phoneGoogleSignedIn: true,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save');
+
+      document.getElementById('gcloud-phone-section').style.display = 'none';
+      showGCloudOAuthSection();
+    } catch (error) {
+      btn.disabled = false;
+      btn.textContent = 'Confirm & Continue to Authorization';
+      document.getElementById('gcloud-error').textContent = error.message;
+    }
+  });
+
+  // Show the OAuth authorization section and fetch the auth URL
+  async function showGCloudOAuthSection() {
+    document.getElementById('gcloud-oauth-section').style.display = '';
+
+    // Populate email + password in the OAuth section
+    document.getElementById('gcloud-oauth-email').textContent = document.getElementById('gcloud-email-display').textContent;
+    document.getElementById('gcloud-oauth-password').textContent = document.getElementById('gcloud-password-display').textContent;
+
     try {
       const res = await fetch('/api/agents/gcloud-auth-url', {
         method: 'POST',
@@ -1254,13 +1361,6 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to get auth URL');
 
-      // Show ready state
-      document.getElementById('gcloud-loading').style.display = 'none';
-      document.getElementById('gcloud-ready').style.display = '';
-      document.getElementById('gcloud-email-display').textContent = setup?.step_data?.email || '';
-      document.getElementById('gcloud-password-display').textContent = setup?.step_data?.email_password || '';
-
-      // Authorize button
       const authBtn = document.getElementById('gcloud-auth-btn');
       authBtn.onclick = () => {
         window.open(data.authUrl);
@@ -1268,8 +1368,6 @@
         startGCloudPolling();
       };
     } catch (error) {
-      document.getElementById('gcloud-loading').style.display = 'none';
-      document.getElementById('gcloud-ready').style.display = '';
       document.getElementById('gcloud-error').textContent = error.message;
     }
   }
