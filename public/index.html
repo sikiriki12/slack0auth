@@ -661,8 +661,10 @@
     setupId: null,
     imageBase64: null,
     imageIsAiGenerated: true,
+    imageCache: { male: null, female: null },
     nameAvailable: null,
     currentStep: 0,
+    regenerating: false,
   };
 
   // Build stepper
@@ -777,6 +779,12 @@
     state.imageBase64 = null;
   }
 
+  // Update Next button state based on all conditions
+  function updateNextBtn() {
+    const btn = document.getElementById('next-btn');
+    btn.disabled = !state.nameAvailable || state.regenerating;
+  }
+
   // Debounced name check
   let nameTimer = null;
   function checkName(name) {
@@ -788,7 +796,7 @@
       status.textContent = '';
       status.className = 'name-status';
       state.nameAvailable = null;
-      nextBtn.disabled = true;
+      updateNextBtn();
       return;
     }
 
@@ -808,12 +816,12 @@
         if (taken) {
           status.textContent = 'taken';
           status.className = 'name-status taken';
-          nextBtn.disabled = true;
+          state.nameAvailable = false;
         } else {
           status.textContent = 'available';
           status.className = 'name-status available';
-          nextBtn.disabled = false;
         }
+        updateNextBtn();
       } catch {
         status.textContent = '';
         status.className = 'name-status';
@@ -845,10 +853,11 @@
       document.getElementById(`gender-${data.gender}`).checked = true;
       document.getElementById('tier-junior').checked = true;
 
-      // Show image
+      // Show image and cache per gender
       if (data.image) {
         state.imageBase64 = data.image;
         state.imageIsAiGenerated = true;
+        state.imageCache[data.gender] = data.image;
         showImage(data.image);
       }
 
@@ -867,10 +876,15 @@
     }
   });
 
-  // Gender change — clear AI-generated image
+  // Gender change — swap to cached image or clear
   document.querySelectorAll('input[name="gender"]').forEach((radio) => {
     radio.addEventListener('change', () => {
-      if (state.imageIsAiGenerated) {
+      if (!state.imageIsAiGenerated) return; // don't touch manually uploaded images
+      const gender = document.querySelector('input[name="gender"]:checked')?.value;
+      if (state.imageCache[gender]) {
+        state.imageBase64 = state.imageCache[gender];
+        showImage(state.imageCache[gender]);
+      } else {
         clearImage();
       }
     });
@@ -881,6 +895,8 @@
     const btn = document.getElementById('regenerate-btn');
     btn.disabled = true;
     btn.textContent = '...';
+    state.regenerating = true;
+    updateNextBtn();
 
     try {
       const gender = document.querySelector('input[name="gender"]:checked')?.value;
@@ -896,13 +912,16 @@
       if (data.image) {
         state.imageBase64 = data.image;
         state.imageIsAiGenerated = true;
+        state.imageCache[gender] = data.image;
         showImage(data.image);
       }
     } catch (error) {
       console.error('Regenerate failed:', error);
     } finally {
+      state.regenerating = false;
       btn.disabled = false;
       btn.textContent = 'Re-generate';
+      updateNextBtn();
     }
   });
 
