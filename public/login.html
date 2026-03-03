@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login — Saint</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1019;
+    --surface: #1a1a2e;
+    --border: #2a2a45;
+    --text: #f0ede8;
+    --text-dim: #6a6578;
+    --accent: #feca57;
+    --accent-dim: rgba(254, 202, 87, 0.12);
+    --error: #f56363;
+    --sans: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  ::selection {
+    color: #1a1a2e;
+    background: rgba(254, 202, 87, 0.4);
+  }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .login-box {
+    width: 100%;
+    max-width: 360px;
+    text-align: center;
+  }
+
+  h1 {
+    font-weight: 600;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  h1 .highlight { color: var(--accent); }
+
+  p {
+    font-size: 0.875rem;
+    color: var(--text-dim);
+    margin-bottom: 2rem;
+  }
+
+  input[type="password"] {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    outline: none;
+    transition: border-color 0.2s;
+    margin-bottom: 1rem;
+  }
+
+  input[type="password"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+
+  input::placeholder { color: var(--text-dim); }
+
+  button {
+    width: 100%;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 100px;
+    border: none;
+    cursor: pointer;
+    background: var(--accent);
+    color: #1a1a2e;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  button:hover {
+    filter: brightness(1.08);
+    box-shadow: 0 4px 20px rgba(254, 202, 87, 0.25);
+  }
+
+  button:disabled {
+    background: var(--accent-dim);
+    color: var(--text-dim);
+    cursor: not-allowed;
+    box-shadow: none;
+    filter: none;
+  }
+
+  .error {
+    font-size: 0.8rem;
+    color: var(--error);
+    margin-top: 0.75rem;
+  }
+
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top-color: currentColor;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="login-box">
+  <h1><span class="highlight">Saint</span> Setup</h1>
+  <p>Enter password to continue</p>
+
+  <form id="login-form">
+    <input type="password" id="password" placeholder="Password" autofocus required>
+    <button type="submit" id="login-btn">Log in</button>
+    <div id="error" class="error"></div>
+  </form>
+</div>
+
+<script>
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('login-btn');
+    const err = document.getElementById('error');
+    const password = document.getElementById('password').value;
+    err.textContent = '';
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div>';
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Login failed');
+      }
+
+      window.location.href = '/';
+    } catch (error) {
+      err.textContent = error.message;
+      btn.disabled = false;
+      btn.textContent = 'Log in';
+    }
+  });
+</script>
+
+</body>
+</html>
