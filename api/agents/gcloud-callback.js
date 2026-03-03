@@ -6,7 +6,7 @@ const REDIRECT_URI = 'https://slack0auth.vercel.app/api/agents/gcloud-callback';
 const GOGCLI_SERVICES = [
   'gmail', 'calendar', 'chat', 'drive', 'docs', 'slides',
   'contacts', 'tasks', 'sheets', 'forms', 'appscript',
-  'groups', 'keep', 'people',
+  'groups', 'people',
 ];
 
 const GOGCLI_SCOPES = [
@@ -33,7 +33,6 @@ const GOGCLI_SCOPES = [
   'https://www.googleapis.com/auth/script.deployments',
   'https://www.googleapis.com/auth/script.processes',
   'https://www.googleapis.com/auth/cloud-identity.groups.readonly',
-  'https://www.googleapis.com/auth/keep.readonly',
   'profile',
 ];
 
