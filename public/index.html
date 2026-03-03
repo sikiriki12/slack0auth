@@ -608,27 +608,63 @@
     </div>
 
     <div id="gmail-ready" style="display: none;">
-      <div style="text-align: center; margin-bottom: 2rem;">
-        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#9993;</div>
-        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Gmail Setup</h2>
-        <p style="font-size: 0.875rem; color: var(--text-dim);">Create a workspace email for this employee</p>
+      <!-- Phone Setup Section -->
+      <div id="phone-setup-section">
+        <div style="text-align: center; margin-bottom: 1.5rem;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#128241;</div>
+          <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Phone &amp; Email Setup</h2>
+          <p style="font-size: 0.875rem; color: var(--text-dim);">Assign a phone to <strong id="phone-agent-name" style="color: var(--accent);"></strong></p>
+        </div>
+
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.8rem; color: var(--text-mid); line-height: 1.6;">
+          <strong style="color: var(--text); display: block; margin-bottom: 0.5rem;">Instructions:</strong>
+          1. Find a phone that has fewer than 2 name labels on the back<br>
+          2. On the phone go to <span style="color: var(--accent);">Settings &rarr; Mobile Network &rarr; SIM</span> and find the phone number<br>
+          3. Enter the number below<br>
+          4. Write the agent's name and the phone number on the back of the phone
+        </div>
+
+        <div class="field">
+          <label>Phone number</label>
+          <input type="text" id="agent-phone" placeholder="+1234567890">
+        </div>
+
+        <div style="margin-bottom: 1.5rem;">
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; text-transform: none; letter-spacing: 0; font-size: 0.85rem; color: var(--text-mid);">
+            <input type="checkbox" id="phone-label-confirm" style="width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer;">
+            I've written the name and number on the back of the phone
+          </label>
+        </div>
+
+        <button class="btn btn-primary btn-full" id="phone-confirm-btn" disabled>
+          Confirm Phone Setup
+        </button>
       </div>
 
-      <div class="field">
-        <label>Email address</label>
-        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.9rem; color: var(--accent);" id="email-display"></div>
-      </div>
+      <!-- Email Section (hidden until phone confirmed) -->
+      <div id="email-setup-section" style="display: none;">
+        <div style="text-align: center; margin-bottom: 2rem;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#9993;</div>
+          <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Create Email</h2>
+          <p style="font-size: 0.875rem; color: var(--text-dim);">Workspace email for this employee</p>
+        </div>
 
-      <div class="field">
-        <label>Recovery phone</label>
-        <input type="text" id="recovery-phone" placeholder="+1234567890">
-        <p style="font-size: 0.7rem; color: var(--text-dim); margin-top: 0.35rem;">Required for Google sign-in verification in the next step</p>
-      </div>
+        <div class="field">
+          <label>Email address</label>
+          <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.9rem; color: var(--accent);" id="email-display"></div>
+        </div>
 
-      <button class="btn btn-primary btn-full" id="create-email-btn">
-        Create Email &amp; Continue &rarr;
-      </button>
-      <div id="email-error" class="error"></div>
+        <div class="field">
+          <label>Recovery phone</label>
+          <input type="text" id="recovery-phone" readonly style="opacity: 0.7; cursor: not-allowed;">
+          <p style="font-size: 0.7rem; color: var(--text-dim); margin-top: 0.35rem;">Auto-filled from phone setup above</p>
+        </div>
+
+        <button class="btn btn-primary btn-full" id="create-email-btn">
+          Create Email &amp; Continue &rarr;
+        </button>
+        <div id="email-error" class="error"></div>
+      </div>
     </div>
 
     <div id="gmail-done" style="display: none;">
@@ -1088,9 +1124,56 @@
     const suggestedEmail = `${baseName}@saint.work`;
 
     document.getElementById('email-display').textContent = suggestedEmail;
+    document.getElementById('phone-agent-name').textContent = name;
     document.getElementById('gmail-loading').style.display = 'none';
     document.getElementById('gmail-ready').style.display = '';
+
+    // If phone was already saved (resume), skip phone section and show email section
+    if (setup?.step_data?.phone_number) {
+      document.getElementById('phone-setup-section').style.display = 'none';
+      document.getElementById('email-setup-section').style.display = '';
+      document.getElementById('recovery-phone').value = setup.step_data.phone_number;
+    }
   }
+
+  // Phone setup: enable confirm button when phone entered + checkbox checked
+  function updatePhoneConfirmBtn() {
+    const phone = document.getElementById('agent-phone').value.trim();
+    const checked = document.getElementById('phone-label-confirm').checked;
+    document.getElementById('phone-confirm-btn').disabled = !phone || !checked;
+  }
+
+  document.getElementById('agent-phone').addEventListener('input', updatePhoneConfirmBtn);
+  document.getElementById('phone-label-confirm').addEventListener('change', updatePhoneConfirmBtn);
+
+  // Phone confirm button: save phone number and reveal email section
+  document.getElementById('phone-confirm-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('phone-confirm-btn');
+    const phone = document.getElementById('agent-phone').value.trim();
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Saving...';
+
+    try {
+      const res = await fetch('/api/agents/save-phone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setupId: state.setupId, phoneNumber: phone }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save phone');
+
+      // Hide phone section, show email section with pre-filled recovery phone
+      document.getElementById('phone-setup-section').style.display = 'none';
+      document.getElementById('email-setup-section').style.display = '';
+      document.getElementById('recovery-phone').value = phone;
+    } catch (error) {
+      btn.disabled = false;
+      btn.textContent = 'Confirm Phone Setup';
+      document.getElementById('email-error').textContent = error.message;
+    }
+  });
 
   // Create email button
   document.getElementById('create-email-btn').addEventListener('click', async () => {
