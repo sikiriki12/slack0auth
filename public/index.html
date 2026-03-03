@@ -3,29 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Provision Slack App</title>
+<title>New Employee Setup — Saint</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #1a1a1a;
-    --surface: #242424;
-    --border: #3a3a3a;
-    --border-focus: #555;
+    --bg: #0f1019;
+    --surface: #1a1a2e;
+    --border: #2a2a45;
+    --border-focus: #3e3e60;
     --text: #f0ede8;
-    --text-mid: #b0a99f;
-    --text-dim: #8a837a;
-    --accent: #c4f563;
-    --accent-dim: #3a4a1a;
+    --text-mid: #9a96a6;
+    --text-dim: #6a6578;
+    --accent: #feca57;
+    --accent-dim: rgba(254, 202, 87, 0.12);
     --error: #f56363;
-    --mono: 'DM Mono', monospace;
-    --serif: 'Newsreader', Georgia, serif;
+    --sans: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  ::selection {
+    color: #1a1a2e;
+    background: rgba(254, 202, 87, 0.4);
   }
 
   body {
-    font-family: var(--mono);
+    font-family: var(--sans);
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
@@ -34,6 +38,7 @@
     justify-content: center;
     padding: 2rem;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   .container {
@@ -42,22 +47,100 @@
   }
 
   .header {
-    margin-bottom: 3rem;
+    margin-bottom: 2rem;
+    text-align: center;
   }
 
   .header h1 {
-    font-family: var(--serif);
-    font-weight: 400;
+    font-weight: 600;
     font-size: 1.75rem;
     letter-spacing: -0.02em;
     margin-bottom: 0.5rem;
   }
 
-  .header p {
-    font-size: 0.8rem;
-    color: var(--text-dim);
-    letter-spacing: 0.03em;
+  .header h1 .highlight {
+    color: var(--accent);
   }
+
+  .header p {
+    font-size: 0.875rem;
+    color: var(--text-dim);
+  }
+
+  /* Stepper */
+  .stepper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 2.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+
+  .stepper-step {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .stepper-dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: var(--text-dim);
+    position: relative;
+    cursor: default;
+    transition: all 0.2s;
+  }
+
+  .stepper-dot .stepper-tooltip {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s;
+  }
+
+  .stepper-dot:hover .stepper-tooltip {
+    opacity: 1;
+  }
+
+  .stepper-step.active .stepper-dot {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #1a1a2e;
+    font-weight: 600;
+  }
+
+  .stepper-step.completed .stepper-dot {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .stepper-line {
+    width: 12px;
+    height: 2px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
+
+  .stepper-step.completed + .stepper-step .stepper-line,
+  .stepper-step.completed .stepper-line {
+    background: var(--accent);
+  }
+
+  .stepper-step + .stepper-step::before { display: none; }
 
   /* Form Elements */
   .field {
@@ -67,8 +150,9 @@
   label {
     display: block;
     font-size: 0.75rem;
+    font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.08em;
     color: var(--text-mid);
     margin-bottom: 0.5rem;
   }
@@ -79,17 +163,18 @@
     background: var(--surface);
     border: 1px solid var(--border);
     color: var(--text);
-    font-family: var(--mono);
+    font-family: var(--sans);
     font-size: 0.9rem;
     padding: 0.75rem 1rem;
-    border-radius: 6px;
+    border-radius: 10px;
     outline: none;
     transition: border-color 0.2s;
   }
 
   input[type="text"]:focus,
   textarea:focus {
-    border-color: var(--border-focus);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
   }
 
   textarea {
@@ -99,77 +184,145 @@
 
   input::placeholder,
   textarea::placeholder {
-    color: #555;
+    color: var(--text-dim);
   }
 
-  /* Identity row — CV style */
-  .identity-row {
+  /* Avatar area */
+  .avatar-area {
     display: flex;
-    gap: 1.25rem;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: center;
     margin-bottom: 1.5rem;
   }
 
-  .identity-row .field {
-    flex: 1;
-    margin-bottom: 0;
-  }
-
-  /* File Upload */
-  .file-upload {
-    position: relative;
-    width: 110px;
-    height: 110px;
-    min-width: 110px;
-    border-radius: 20px;
-    border: 2px dashed var(--border);
+  .avatar-preview {
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    border: 3px dashed var(--border);
     overflow: hidden;
-    cursor: pointer;
+    position: relative;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     transition: border-color 0.2s, background 0.2s;
   }
 
-  .file-upload:hover,
-  .file-upload.dragover {
+  .avatar-preview.has-image {
+    border-style: solid;
+    border-color: var(--border);
+  }
+
+  .avatar-preview.dragover {
     border-color: var(--accent);
     background: var(--accent-dim);
   }
 
-  .file-upload input {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    cursor: pointer;
-  }
-
-  .file-upload .placeholder {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    height: 100%;
-    color: var(--text-dim);
-    font-size: 0.7rem;
-    gap: 0.25rem;
-    transition: opacity 0.2s;
-  }
-
-  .file-upload .placeholder span {
-    font-size: 1.5rem;
-    line-height: 1;
-  }
-
-  .file-upload img {
-    position: absolute;
-    inset: 0;
+  .avatar-preview img {
     width: 100%;
     height: 100%;
     object-fit: cover;
   }
 
-  .file-upload.has-image .placeholder {
-    opacity: 0;
+  .avatar-placeholder {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    text-align: center;
   }
+
+  .avatar-placeholder span {
+    display: block;
+    font-size: 2rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .avatar-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .btn-sm {
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.4rem 0.85rem;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-mid);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .btn-sm:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn-sm:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  /* Radio group */
+  .radio-group {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .radio-option {
+    flex: 1;
+  }
+
+  .radio-option input {
+    display: none;
+  }
+
+  .radio-option label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text-mid);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .radio-option input:checked + label {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .radio-option label:hover {
+    border-color: var(--border-focus);
+  }
+
+  /* Name field with status */
+  .name-wrapper {
+    position: relative;
+  }
+
+  .name-status {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .name-status.checking { color: var(--text-dim); }
+  .name-status.available { color: var(--accent); }
+  .name-status.taken { color: var(--error); }
 
   /* Buttons */
   .btn {
@@ -177,10 +330,11 @@
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    font-family: var(--mono);
-    font-size: 0.85rem;
-    padding: 0.7rem 1.5rem;
-    border-radius: 6px;
+    font-family: var(--sans);
+    font-size: 0.9rem;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+    border-radius: 100px;
     border: none;
     cursor: pointer;
     transition: all 0.15s;
@@ -189,18 +343,20 @@
 
   .btn-primary {
     background: var(--accent);
-    color: #1a1a1a;
-    font-weight: 500;
+    color: #1a1a2e;
   }
 
   .btn-primary:hover {
-    filter: brightness(1.1);
+    filter: brightness(1.08);
+    box-shadow: 0 4px 20px rgba(254, 202, 87, 0.25);
   }
 
   .btn-primary:disabled {
     background: var(--accent-dim);
-    color: #666;
+    color: var(--text-dim);
     cursor: not-allowed;
+    box-shadow: none;
+    filter: none;
   }
 
   .btn-full {
@@ -222,138 +378,18 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
-  /* Result */
-  .result-badge {
-    display: inline-block;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--accent);
-    background: var(--accent-dim);
-    padding: 0.3rem 0.7rem;
-    border-radius: 100px;
-    margin-bottom: 1rem;
-  }
-
-  .result-name {
-    font-family: var(--serif);
-    font-size: 1.5rem;
-    font-weight: 400;
-    margin-bottom: 2rem;
-    letter-spacing: -0.01em;
-  }
-
-  .step-label {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    color: var(--text-mid);
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .step-block {
-    margin-bottom: 2rem;
-  }
-
-  .step-block p {
-    font-size: 0.8rem;
-    color: var(--text-mid);
-    line-height: 1.6;
-    margin-bottom: 0.75rem;
-  }
-
-  .step-block a {
-    color: var(--accent);
-    text-decoration: none;
-    font-size: 0.85rem;
-    border-bottom: 1px solid var(--accent-dim);
-    transition: border-color 0.2s;
-  }
-
-  .step-block a:hover {
-    border-color: var(--accent);
-  }
-
-  .token-row {
-    display: flex;
-    gap: 0.5rem;
-  }
-
-  .token-row input {
-    flex: 1;
-  }
-
-  /* Copy row */
-  .copy-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 0.5rem 0.75rem;
-    margin-top: 0.75rem;
-  }
-
-  .copy-row code {
-    flex: 1;
-    font-family: var(--mono);
-    font-size: 0.75rem;
-    color: var(--text-mid);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .copy-row button {
-    background: none;
-    border: none;
-    color: var(--text-mid);
-    font-family: var(--mono);
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    cursor: pointer;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    transition: all 0.15s;
-    white-space: nowrap;
-  }
-
-  .copy-row button:hover {
-    color: var(--text);
-    background: var(--border);
-  }
-
-  /* Install section — hidden until token saved */
-  .install-section {
-    display: none;
-    animation: fadeIn 0.3s ease;
-  }
-
-  .install-section.visible {
-    display: block;
-  }
-
-  .divider {
-    height: 1px;
-    background: var(--border);
-    margin: 2rem 0;
-  }
-
   /* Error */
   .error {
     font-size: 0.8rem;
     color: var(--error);
     margin-top: 0.5rem;
+    text-align: center;
   }
 
   /* Spinner */
   .spinner {
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     border: 2px solid transparent;
     border-top-color: currentColor;
     border-radius: 50%;
@@ -363,259 +399,436 @@
   @keyframes spin {
     to { transform: rotate(360deg); }
   }
+
+  /* Placeholder step */
+  .placeholder-step {
+    text-align: center;
+    padding: 3rem 1rem;
+  }
+
+  .placeholder-step .icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .placeholder-step h2 {
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .placeholder-step p {
+    font-size: 0.875rem;
+    color: var(--text-dim);
+  }
+
+  /* Hidden file input */
+  .hidden-input {
+    display: none;
+  }
 </style>
 </head>
 <body>
 
 <div class="container">
   <div class="header">
-    <h1>New Slack App</h1>
-    <p>Provision a bot in seconds</p>
+    <h1>New <span class="highlight">Employee</span></h1>
+    <p>12-step agent setup wizard</p>
   </div>
 
-  <!-- Step 1: Create -->
-  <div id="step-create" class="step active">
-    <form id="create-form">
-      <div class="identity-row">
-        <div class="file-upload" id="file-upload">
-          <div class="placeholder">
-            <span>+</span>
-            Icon
-          </div>
-          <input type="file" id="icon" accept="image/*">
-        </div>
-        <div class="field">
-          <label for="name">Name</label>
-          <input type="text" id="name" name="name" placeholder="My Bot" required>
-        </div>
-      </div>
+  <!-- Stepper -->
+  <div class="stepper" id="stepper"></div>
 
-      <div class="field">
-        <label for="description">Description</label>
-        <textarea id="description" name="description" placeholder="What does this bot do?"></textarea>
-      </div>
-
-      <button type="submit" class="btn btn-primary btn-full" id="create-btn">
-        Create App
-      </button>
-      <div id="create-error" class="error"></div>
-    </form>
+  <!-- Landing -->
+  <div id="step-landing" class="step active">
+    <button class="btn btn-primary btn-full" id="start-btn">
+      Start Employee Creation
+    </button>
   </div>
 
-  <!-- Step 2: Configure Token -->
-  <div id="step-result" class="step">
-    <div class="result-badge">Created</div>
-    <div class="result-name" id="result-name"></div>
-
-    <div class="step-block">
-      <div class="step-label">Step 1 — Generate App Token</div>
-      <p>Open your app's settings and generate an App-Level Token with the <strong>connections:write</strong> scope.</p>
-      <a id="slack-link" href="#" target="_blank" rel="noopener">Open in Slack settings &rarr;</a>
-    </div>
-
-    <div class="step-block">
-      <div class="step-label">Step 2 — Paste it here</div>
-      <div class="token-row">
-        <input type="text" id="app-token" placeholder="xapp-...">
-        <button class="btn btn-primary" id="save-token-btn">Save</button>
-      </div>
-      <div id="token-error" class="error"></div>
-    </div>
-
-    <div id="distribution-section" class="install-section">
-      <div class="divider"></div>
-      <div class="step-block">
-        <div class="step-label">Step 3 — Activate Public Distribution</div>
-        <p>Open the distribution settings, check the "I've reviewed" checkbox, and click <strong>Activate Public Distribution</strong>.</p>
-        <a id="distribution-link" href="#" target="_blank" rel="noopener">Open distribution settings &rarr;</a>
-        <br><br>
-        <button class="btn btn-primary btn-full" id="confirm-distribution-btn">I've activated public distribution</button>
-      </div>
-    </div>
-
-    <div id="success-section" class="install-section">
-      <div class="divider"></div>
-      <div class="result-badge">Setup Complete</div>
-      <div class="step-block" style="margin-top: 1rem;">
-        <div class="step-label">Install URL</div>
-        <p>Share this with the client to install the app.</p>
-        <div class="copy-row">
-          <code id="install-url-text"></code>
-          <button onclick="copyInstallUrl()">Copy</button>
+  <!-- Step 1: Identity -->
+  <div id="step-identity" class="step">
+    <div class="avatar-area">
+      <div class="avatar-preview" id="avatar-preview">
+        <div class="avatar-placeholder" id="avatar-placeholder">
+          <span>+</span>
+          Avatar
         </div>
       </div>
+      <div class="avatar-actions">
+        <button class="btn-sm" id="regenerate-btn">Re-generate</button>
+        <button class="btn-sm" id="upload-btn">Upload</button>
+      </div>
+      <input type="file" id="file-input" class="hidden-input" accept="image/*">
+    </div>
+
+    <div class="field">
+      <label for="name">Name</label>
+      <div class="name-wrapper">
+        <input type="text" id="name" placeholder="Agent name" required>
+        <span class="name-status" id="name-status"></span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="personality">Personality</label>
+      <textarea id="personality" placeholder="e.g. 🎨 Creative and strategic"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Gender</label>
+      <div class="radio-group" id="gender-group">
+        <div class="radio-option">
+          <input type="radio" name="gender" id="gender-male" value="male">
+          <label for="gender-male">Male</label>
+        </div>
+        <div class="radio-option">
+          <input type="radio" name="gender" id="gender-female" value="female">
+          <label for="gender-female">Female</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Tier</label>
+      <div class="radio-group">
+        <div class="radio-option">
+          <input type="radio" name="tier" id="tier-junior" value="junior" checked>
+          <label for="tier-junior">Junior</label>
+        </div>
+        <div class="radio-option">
+          <input type="radio" name="tier" id="tier-senior" value="senior">
+          <label for="tier-senior">Senior</label>
+        </div>
+        <div class="radio-option">
+          <input type="radio" name="tier" id="tier-director" value="director">
+          <label for="tier-director">Director</label>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-full" id="next-btn" disabled>
+      Next Step &rarr;
+    </button>
+    <div id="form-error" class="error"></div>
+  </div>
+
+  <!-- Step 2: Placeholder -->
+  <div id="step-2-placeholder" class="step">
+    <div class="placeholder-step">
+      <div class="icon">&#9993;</div>
+      <h2>Step 2: Gmail Setup</h2>
+      <p>Coming soon</p>
     </div>
   </div>
 </div>
 
-<script>
-  const state = { appId: null, installUrl: null };
+<script type="module">
+  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-  // Resize image to fit under maxBytes using canvas
+  // Fetch public config from server (env-driven, not hardcoded)
+  const config = await fetch('/api/config').then((r) => r.json());
+  const supabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
+
+  const STEP_LABELS = [
+    'Identity', 'Gmail', 'Google Cloud', 'Phone Login', 'WhatsApp',
+    'AI Account', 'Slack', 'Discord', 'Gateway', 'Config', 'WhatsApp GW', 'Ready'
+  ];
+
+  // State
+  const state = {
+    setupId: null,
+    imageBase64: null,
+    imageIsAiGenerated: true,
+    nameAvailable: null,
+    currentStep: 0,
+  };
+
+  // Build stepper
+  function buildStepper(activeIndex) {
+    const stepper = document.getElementById('stepper');
+    stepper.innerHTML = '';
+    STEP_LABELS.forEach((label, i) => {
+      if (i > 0) {
+        const line = document.createElement('div');
+        line.className = 'stepper-line';
+        stepper.appendChild(line);
+      }
+      const step = document.createElement('div');
+      step.className = 'stepper-step';
+      if (i < activeIndex) step.classList.add('completed');
+      if (i === activeIndex) step.classList.add('active');
+      step.innerHTML = `<div class="stepper-dot">${i + 1}<span class="stepper-tooltip">${label}</span></div>`;
+      stepper.appendChild(step);
+    });
+  }
+
+  buildStepper(-1); // No step active initially
+
+  // Image resize (reused from index.html pattern)
   function resizeImage(file, maxBytes = 2 * 1024 * 1024) {
     return new Promise((resolve) => {
-      if (file.size <= maxBytes) {
-        resolve(file);
-        return;
-      }
+      if (file.size <= maxBytes) { resolve(file); return; }
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        // Scale down proportionally
         let { width, height } = img;
-        const scale = Math.sqrt(maxBytes / file.size) * 0.9; // 0.9 safety margin
+        const scale = Math.sqrt(maxBytes / file.size) * 0.9;
         width = Math.round(width * scale);
         height = Math.round(height * scale);
         canvas.width = width;
         canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob((blob) => {
-          const resized = new File([blob], file.name, { type: 'image/png' });
-          resolve(resized);
-        }, 'image/png', 0.85);
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => resolve(new File([blob], file.name, { type: 'image/png' })), 'image/png', 0.85);
       };
       img.src = URL.createObjectURL(file);
     });
   }
 
-  // File upload preview + drag & drop
-  const fileUpload = document.getElementById('file-upload');
-  const fileInput = document.getElementById('icon');
-
-  async function handleFile(file) {
-    if (!file || !file.type.startsWith('image/')) return;
-    const resized = await resizeImage(file);
-    // Update the file input
-    const dt = new DataTransfer();
-    dt.items.add(resized);
-    fileInput.files = dt.files;
-    // Show preview
-    const existing = fileUpload.querySelector('img');
-    if (existing) existing.remove();
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(resized);
-    fileUpload.appendChild(img);
-    fileUpload.classList.add('has-image');
-  }
-
-  fileInput.addEventListener('change', () => handleFile(fileInput.files[0]));
-
-  fileUpload.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    fileUpload.classList.add('dragover');
-  });
-
-  fileUpload.addEventListener('dragleave', () => {
-    fileUpload.classList.remove('dragover');
-  });
-
-  fileUpload.addEventListener('drop', (e) => {
-    e.preventDefault();
-    fileUpload.classList.remove('dragover');
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
-  });
-
-  // Create form
-  document.getElementById('create-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('create-btn');
-    const err = document.getElementById('create-error');
-    err.textContent = '';
-
-    const name = document.getElementById('name').value.trim();
-    const description = document.getElementById('description').value.trim();
-
-    if (!name) return;
-
-    btn.disabled = true;
-    btn.innerHTML = '<div class="spinner"></div> Creating...';
-
-    try {
-      const res = await fetch('/api/provision', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, description }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to create app');
-      }
-
-      state.appId = data.appId;
-      state.installUrl = data.installUrl;
-
-      document.getElementById('result-name').textContent = name;
-      document.getElementById('slack-link').href = `https://api.slack.com/apps/${data.appId}`;
-      document.getElementById('distribution-link').href = `https://api.slack.com/apps/${data.appId}/distribute`;
-      document.getElementById('install-url-text').textContent = data.installUrl;
-
-      document.getElementById('step-create').classList.remove('active');
-      document.getElementById('step-result').classList.add('active');
-    } catch (error) {
-      err.textContent = error.message;
-      btn.disabled = false;
-      btn.textContent = 'Create App';
-    }
-  });
-
-  // Copy install URL
-  function copyInstallUrl() {
-    navigator.clipboard.writeText(state.installUrl).then(() => {
-      const btn = document.querySelector('.copy-row button');
-      btn.textContent = 'Copied';
-      setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+  function fileToBase64(file) {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.readAsDataURL(file);
     });
   }
 
-  // Save token
-  document.getElementById('save-token-btn').addEventListener('click', async () => {
-    const btn = document.getElementById('save-token-btn');
-    const err = document.getElementById('token-error');
-    const tokenInput = document.getElementById('app-token');
-    const appToken = tokenInput.value.trim();
+  // Show image in preview
+  function showImage(base64) {
+    const preview = document.getElementById('avatar-preview');
+    const placeholder = document.getElementById('avatar-placeholder');
+    let img = preview.querySelector('img');
+    if (!img) {
+      img = document.createElement('img');
+      preview.appendChild(img);
+    }
+    img.src = `data:image/png;base64,${base64}`;
+    placeholder.style.display = 'none';
+    preview.classList.add('has-image');
+  }
+
+  function clearImage() {
+    const preview = document.getElementById('avatar-preview');
+    const placeholder = document.getElementById('avatar-placeholder');
+    const img = preview.querySelector('img');
+    if (img) img.remove();
+    placeholder.style.display = '';
+    preview.classList.remove('has-image');
+    state.imageBase64 = null;
+  }
+
+  // Debounced name check
+  let nameTimer = null;
+  function checkName(name) {
+    const status = document.getElementById('name-status');
+    const nextBtn = document.getElementById('next-btn');
+    clearTimeout(nameTimer);
+
+    if (!name.trim()) {
+      status.textContent = '';
+      status.className = 'name-status';
+      state.nameAvailable = null;
+      nextBtn.disabled = true;
+      return;
+    }
+
+    status.textContent = '...';
+    status.className = 'name-status checking';
+
+    nameTimer = setTimeout(async () => {
+      try {
+        const [empRes, setupRes] = await Promise.all([
+          supabase.from('employees').select('name').ilike('name', name.trim()),
+          supabase.from('agent_setups').select('name').ilike('name', name.trim()).eq('status', 'in_progress'),
+        ]);
+
+        const taken = (empRes.data?.length || 0) > 0 || (setupRes.data?.length || 0) > 0;
+        state.nameAvailable = !taken;
+
+        if (taken) {
+          status.textContent = 'taken';
+          status.className = 'name-status taken';
+          nextBtn.disabled = true;
+        } else {
+          status.textContent = 'available';
+          status.className = 'name-status available';
+          nextBtn.disabled = false;
+        }
+      } catch {
+        status.textContent = '';
+        status.className = 'name-status';
+      }
+    }, 300);
+  }
+
+  document.getElementById('name').addEventListener('input', (e) => checkName(e.target.value));
+
+  // Start button — generate identity
+  document.getElementById('start-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('start-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Generating...';
+
+    try {
+      const res = await fetch('/api/agents/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Generation failed');
+
+      // Fill form
+      document.getElementById('name').value = data.name || '';
+      document.getElementById('personality').value = data.personality || '';
+      document.getElementById(`gender-${data.gender}`).checked = true;
+      document.getElementById('tier-junior').checked = true;
+
+      // Show image
+      if (data.image) {
+        state.imageBase64 = data.image;
+        state.imageIsAiGenerated = true;
+        showImage(data.image);
+      }
+
+      // Transition to step 1
+      buildStepper(0);
+      document.getElementById('step-landing').classList.remove('active');
+      document.getElementById('step-identity').classList.add('active');
+      state.currentStep = 1;
+
+      // Trigger name check
+      checkName(data.name);
+    } catch (error) {
+      btn.disabled = false;
+      btn.textContent = 'Start Employee Creation';
+      alert(error.message);
+    }
+  });
+
+  // Gender change — clear AI-generated image
+  document.querySelectorAll('input[name="gender"]').forEach((radio) => {
+    radio.addEventListener('change', () => {
+      if (state.imageIsAiGenerated) {
+        clearImage();
+      }
+    });
+  });
+
+  // Re-generate button
+  document.getElementById('regenerate-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('regenerate-btn');
+    btn.disabled = true;
+    btn.textContent = '...';
+
+    try {
+      const gender = document.querySelector('input[name="gender"]:checked')?.value;
+      const res = await fetch('/api/agents/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gender, regenerateImageOnly: true }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      if (data.image) {
+        state.imageBase64 = data.image;
+        state.imageIsAiGenerated = true;
+        showImage(data.image);
+      }
+    } catch (error) {
+      console.error('Regenerate failed:', error);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Re-generate';
+    }
+  });
+
+  // Upload button
+  document.getElementById('upload-btn').addEventListener('click', () => {
+    document.getElementById('file-input').click();
+  });
+
+  document.getElementById('file-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    const resized = await resizeImage(file);
+    const base64 = await fileToBase64(resized);
+    state.imageBase64 = base64;
+    state.imageIsAiGenerated = false;
+    showImage(base64);
+  });
+
+  // Drag and drop on avatar
+  const avatarPreview = document.getElementById('avatar-preview');
+  avatarPreview.addEventListener('dragover', (e) => { e.preventDefault(); avatarPreview.classList.add('dragover'); });
+  avatarPreview.addEventListener('dragleave', () => avatarPreview.classList.remove('dragover'));
+  avatarPreview.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    avatarPreview.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    const resized = await resizeImage(file);
+    const base64 = await fileToBase64(resized);
+    state.imageBase64 = base64;
+    state.imageIsAiGenerated = false;
+    showImage(base64);
+  });
+
+  // Next Step button
+  document.getElementById('next-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('next-btn');
+    const err = document.getElementById('form-error');
     err.textContent = '';
 
-    if (!appToken.startsWith('xapp-')) {
-      err.textContent = 'Token must start with xapp-';
+    const name = document.getElementById('name').value.trim();
+    const personality = document.getElementById('personality').value.trim();
+    const gender = document.querySelector('input[name="gender"]:checked')?.value;
+    const tier = document.querySelector('input[name="tier"]:checked')?.value;
+
+    if (!name || !personality || !gender || !tier) {
+      err.textContent = 'All fields are required';
+      return;
+    }
+
+    if (!state.nameAvailable) {
+      err.textContent = 'Name is not available';
       return;
     }
 
     btn.disabled = true;
-    btn.innerHTML = '<div class="spinner"></div>';
+    btn.innerHTML = '<div class="spinner"></div> Saving...';
 
     try {
-      const res = await fetch('/api/apps', {
-        method: 'PATCH',
+      const res = await fetch('/api/agents/create', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appId: state.appId, appToken }),
+        body: JSON.stringify({
+          name,
+          personality,
+          gender,
+          tier,
+          image: state.imageBase64,
+        }),
       });
 
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to save');
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to save token');
-      }
+      state.setupId = data.setupId;
 
-      tokenInput.disabled = true;
-      btn.textContent = 'Saved';
-      document.getElementById('distribution-section').classList.add('visible');
+      // Transition to step 2
+      buildStepper(1);
+      document.getElementById('step-identity').classList.remove('active');
+      document.getElementById('step-2-placeholder').classList.add('active');
+      state.currentStep = 2;
     } catch (error) {
       err.textContent = error.message;
       btn.disabled = false;
-      btn.textContent = 'Save';
+      btn.innerHTML = 'Next Step &rarr;';
     }
-  });
-
-  // Confirm distribution
-  document.getElementById('confirm-distribution-btn').addEventListener('click', () => {
-    const btn = document.getElementById('confirm-distribution-btn');
-    btn.disabled = true;
-    btn.textContent = 'Confirmed';
-    document.getElementById('success-section').classList.add('visible');
   });
 </script>
 

@@ -8,18 +8,19 @@ export default async function handler(req, res) {
   const { gender: requestedGender, regenerateImageOnly } = req.body || {};
 
   try {
-    // Fetch existing names from both tables to avoid duplicates
+    // Fetch existing names and avatar URLs from both tables
     const [employeesRes, setupsRes] = await Promise.all([
-      supabase.from('employees').select('name, personality'),
+      supabase.from('employees').select('name, personality, avatar_url, gender'),
       supabase.from('agent_setups').select('name'),
     ]);
 
+    const employees = employeesRes.data || [];
     const existingNames = [
-      ...(employeesRes.data || []).map((e) => e.name),
+      ...employees.map((e) => e.name),
       ...(setupsRes.data || []).map((s) => s.name),
     ];
 
-    const existingPersonalities = (employeesRes.data || [])
+    const existingPersonalities = employees
       .map((e) => e.personality)
       .filter(Boolean);
 
@@ -61,11 +62,45 @@ Respond in JSON only: {"name": "...", "personality": "..."}`;
       personality = parsed.personality;
     }
 
-    // Generate avatar image
-    const imagePrompt = `Generate a professional headshot portrait photo of a ${gender} person in their late 20s or early 30s.
-Clean studio lighting, neutral background, shoulders visible, looking at camera with a natural expression.
-Professional corporate style, high quality, photorealistic.
-The image should look like a real employee profile photo.`;
+    // Pick 4 random employee avatars as style reference
+    const withAvatars = employees.filter((e) => e.avatar_url);
+    const shuffled = withAvatars.sort(() => Math.random() - 0.5);
+    const referenceEmployees = shuffled.slice(0, 4);
+
+    // Download reference images as base64
+    const referenceImages = await Promise.all(
+      referenceEmployees.map(async (emp) => {
+        try {
+          const imgRes = await fetch(emp.avatar_url);
+          const buffer = await imgRes.arrayBuffer();
+          const base64 = Buffer.from(buffer).toString('base64');
+          const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
+          return { base64, mimeType: contentType };
+        } catch {
+          return null;
+        }
+      })
+    );
+
+    const validRefs = referenceImages.filter(Boolean);
+
+    // Build multimodal parts: reference images + text prompt
+    const imageParts = validRefs.map((ref) => ({
+      inlineData: { mimeType: ref.mimeType, data: ref.base64 },
+    }));
+
+    const imagePrompt = `Here are ${validRefs.length} example profile photos of existing AI employees. Study their style carefully.
+
+Generate a NEW profile photo for a ${gender} AI employee that matches this EXACT style:
+- 3D cartoon / Pixar-style rendered character
+- Head and shoulders portrait, looking at camera, friendly expression
+- Solid colored background (pick a DIFFERENT color than the examples — be creative)
+- Casual clothing (hoodie, jacket, sweater, etc.)
+- Ethnically diverse — make this character look DIFFERENT from the examples
+- Same high-quality 3D render style, same lighting approach
+- Square aspect ratio, profile photo framing
+
+IMPORTANT: Match the 3D cartoon style exactly. Do NOT generate a photorealistic image.`;
 
     const imageRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${process.env.GEMINI_API_KEY}`,
@@ -73,18 +108,18 @@ The image should look like a real employee profile photo.`;
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: imagePrompt }] }],
+          contents: [{ parts: [...imageParts, { text: imagePrompt }] }],
           generationConfig: { responseModalities: ['IMAGE', 'TEXT'] },
         }),
       }
     );
 
     const imageData = await imageRes.json();
-    const imagePart = imageData.candidates?.[0]?.content?.parts?.find(
+    const generatedPart = imageData.candidates?.[0]?.content?.parts?.find(
       (p) => p.inlineData
     );
 
-    const image = imagePart ? imagePart.inlineData.data : null;
+    const image = generatedPart ? generatedPart.inlineData.data : null;
 
     return res.status(200).json({
       name,
