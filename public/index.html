@@ -619,6 +619,12 @@
         <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.9rem; color: var(--accent);" id="email-display"></div>
       </div>
 
+      <div class="field">
+        <label>Recovery phone</label>
+        <input type="text" id="recovery-phone" placeholder="+1234567890">
+        <p style="font-size: 0.7rem; color: var(--text-dim); margin-top: 0.35rem;">Required for Google sign-in verification in the next step</p>
+      </div>
+
       <button class="btn btn-primary btn-full" id="create-email-btn">
         Create Email &amp; Continue &rarr;
       </button>
@@ -1095,10 +1101,11 @@
     btn.innerHTML = '<div class="spinner"></div> Creating...';
 
     try {
+      const recoveryPhone = document.getElementById('recovery-phone').value.trim();
       const res = await fetch('/api/agents/create-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ setupId: state.setupId }),
+        body: JSON.stringify({ setupId: state.setupId, recoveryPhone }),
       });
 
       const data = await res.json();
