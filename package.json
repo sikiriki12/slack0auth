@@ -1,6 +1,7 @@
 {
   "name": "saint-slack-oauth",
   "dependencies": {
+    "@supabase/supabase-js": "^2.49.1",
     "@vercel/kv": "^2.0.0"
   }
 }
