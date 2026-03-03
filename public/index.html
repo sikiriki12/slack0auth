@@ -426,6 +426,87 @@
   .hidden-input {
     display: none;
   }
+
+  /* Landing divider */
+  .landing-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1.5rem 0;
+    color: var(--text-dim);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .landing-divider::before,
+  .landing-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* In-progress list */
+  .in-progress-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .in-progress-card {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    transition: border-color 0.15s;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .in-progress-card:hover {
+    border-color: var(--accent);
+  }
+
+  .in-progress-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--border);
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .in-progress-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .in-progress-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .in-progress-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+
+  .in-progress-meta {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+
+  .in-progress-arrow {
+    color: var(--text-dim);
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -442,8 +523,12 @@
   <!-- Landing -->
   <div id="step-landing" class="step active">
     <button class="btn btn-primary btn-full" id="start-btn">
-      Start Employee Creation
+      Start New Employee
     </button>
+    <div id="in-progress-section" style="display: none;">
+      <div class="landing-divider">or continue</div>
+      <div class="in-progress-list" id="in-progress-list"></div>
+    </div>
   </div>
 
   <!-- Step 1: Identity -->
@@ -564,6 +649,52 @@
   }
 
   buildStepper(-1); // No step active initially
+
+  // Load in-progress setups
+  async function loadInProgress() {
+    const { data } = await supabase
+      .from('agent_setups')
+      .select('id, name, avatar_url, current_step, tier')
+      .eq('status', 'in_progress')
+      .order('updated_at', { ascending: false });
+
+    if (!data || data.length === 0) return;
+
+    const section = document.getElementById('in-progress-section');
+    const list = document.getElementById('in-progress-list');
+    section.style.display = '';
+
+    list.innerHTML = data.map((setup) => `
+      <div class="in-progress-card" data-id="${setup.id}" data-step="${setup.current_step}">
+        <div class="in-progress-avatar">
+          ${setup.avatar_url ? `<img src="${setup.avatar_url}" alt="${setup.name}">` : ''}
+        </div>
+        <div class="in-progress-info">
+          <div class="in-progress-name">${setup.name}</div>
+          <div class="in-progress-meta">Step ${setup.current_step} of 12 &middot; ${STEP_LABELS[setup.current_step - 1] || ''}</div>
+        </div>
+        <div class="in-progress-arrow">&rarr;</div>
+      </div>
+    `).join('');
+
+    // Click handler for continue cards
+    list.querySelectorAll('.in-progress-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        const setupId = card.dataset.id;
+        const step = parseInt(card.dataset.step, 10);
+        state.setupId = setupId;
+        // For now, step 1 completed means show step 2 placeholder
+        if (step >= 1) {
+          buildStepper(step);
+          document.getElementById('step-landing').classList.remove('active');
+          document.getElementById('step-2-placeholder').classList.add('active');
+          state.currentStep = step + 1;
+        }
+      });
+    });
+  }
+
+  loadInProgress();
 
   // Image resize (reused from index.html pattern)
   function resizeImage(file, maxBytes = 2 * 1024 * 1024) {
