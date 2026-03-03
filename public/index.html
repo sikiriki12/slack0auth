@@ -715,10 +715,7 @@
 
         <div class="field">
           <label>Password</label>
-          <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <div style="flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.9rem; color: var(--text); font-family: monospace; letter-spacing: 0.05em;" id="gcloud-password-display"></div>
-            <span class="copy-icon" onclick="copyText(this, 'gcloud-password-display')" title="Copy password">&#128203;</span>
-          </div>
+          <div style="position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 2.5rem 0.75rem 1rem; font-size: 0.9rem; color: var(--text); font-family: monospace; letter-spacing: 0.05em;" id="gcloud-password-display"><span id="gcloud-password-text"></span><span class="copy-icon" onclick="copyText(this, 'gcloud-password-text')" title="Copy password" style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);">&#128203;</span></div>
         </div>
 
         <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.8rem; color: var(--text-mid); line-height: 1.6;">
@@ -756,10 +753,7 @@
 
         <div class="field">
           <label>Password</label>
-          <div style="display: flex; gap: 0.5rem; align-items: center;">
-            <div style="flex: 1; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.9rem; color: var(--text); font-family: monospace; letter-spacing: 0.05em;" id="gcloud-oauth-password"></div>
-            <span class="copy-icon" onclick="copyText(this, 'gcloud-oauth-password')" title="Copy password">&#128203;</span>
-          </div>
+          <div style="position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 2.5rem 0.75rem 1rem; font-size: 0.9rem; color: var(--text); font-family: monospace; letter-spacing: 0.05em;" id="gcloud-oauth-password"><span id="gcloud-oauth-password-text"></span><span class="copy-icon" onclick="copyText(this, 'gcloud-oauth-password-text')" title="Copy password" style="position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%);">&#128203;</span></div>
         </div>
 
         <button class="btn btn-primary btn-full" id="gcloud-auth-btn">
@@ -1318,7 +1312,7 @@
     document.getElementById('gcloud-loading').style.display = 'none';
     document.getElementById('gcloud-ready').style.display = '';
     document.getElementById('gcloud-email-display').textContent = setup?.step_data?.email || '';
-    document.getElementById('gcloud-password-display').textContent = setup?.step_data?.email_password || '';
+    document.getElementById('gcloud-password-text').textContent = setup?.step_data?.email_password || '';
 
     // If phone sign-in already confirmed (resume), skip to OAuth section
     if (setup?.step_data?.phone_google_signed_in) {
@@ -1373,7 +1367,7 @@
 
     // Populate email + password in the OAuth section
     document.getElementById('gcloud-oauth-email').textContent = document.getElementById('gcloud-email-display').textContent;
-    document.getElementById('gcloud-oauth-password').textContent = document.getElementById('gcloud-password-display').textContent;
+    document.getElementById('gcloud-oauth-password-text').textContent = document.getElementById('gcloud-password-text').textContent;
 
     try {
       const res = await fetch('/api/agents/gcloud-auth-url', {
