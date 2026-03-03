@@ -598,11 +598,47 @@
     <div id="form-error" class="error"></div>
   </div>
 
-  <!-- Step 2: Placeholder -->
-  <div id="step-2-placeholder" class="step">
-    <div class="placeholder-step">
+  <!-- Step 2: Gmail -->
+  <div id="step-gmail" class="step">
+    <div class="placeholder-step" id="gmail-loading" style="padding-bottom: 1rem;">
       <div class="icon">&#9993;</div>
-      <h2>Step 2: Gmail Setup</h2>
+      <h2>Gmail Setup</h2>
+      <p>Checking email availability...</p>
+      <div style="margin-top: 1rem; display: flex; justify-content: center;"><div class="spinner"></div></div>
+    </div>
+
+    <div id="gmail-ready" style="display: none;">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#9993;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Gmail Setup</h2>
+        <p style="font-size: 0.875rem; color: var(--text-dim);">Create a workspace email for this employee</p>
+      </div>
+
+      <div class="field">
+        <label>Email address</label>
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.9rem; color: var(--accent);" id="email-display"></div>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="create-email-btn">
+        Create Email &amp; Continue &rarr;
+      </button>
+      <div id="email-error" class="error"></div>
+    </div>
+
+    <div id="gmail-done" style="display: none;">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#9989;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Email Created</h2>
+        <p style="font-size: 0.9rem; color: var(--accent); margin-top: 0.5rem;" id="email-created-display"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Placeholder -->
+  <div id="step-3-placeholder" class="step">
+    <div class="placeholder-step">
+      <div class="icon">&#9729;</div>
+      <h2>Step 3: Google Cloud</h2>
       <p>Coming soon</p>
     </div>
   </div>
@@ -682,14 +718,7 @@
       card.addEventListener('click', () => {
         const setupId = card.dataset.id;
         const step = parseInt(card.dataset.step, 10);
-        state.setupId = setupId;
-        // For now, step 1 completed means show step 2 placeholder
-        if (step >= 1) {
-          buildStepper(step);
-          document.getElementById('step-landing').classList.remove('active');
-          document.getElementById('step-2-placeholder').classList.add('active');
-          state.currentStep = step + 1;
-        }
+        continueSetup(setupId, step);
       });
     });
   }
@@ -950,17 +979,104 @@
 
       state.setupId = data.setupId;
 
-      // Transition to step 2
-      buildStepper(1);
-      document.getElementById('step-identity').classList.remove('active');
-      document.getElementById('step-2-placeholder').classList.add('active');
-      state.currentStep = 2;
+      // Transition to step 2 (Gmail)
+      showGmailStep();
     } catch (error) {
       err.textContent = error.message;
       btn.disabled = false;
       btn.innerHTML = 'Next Step &rarr;';
     }
   });
+
+  // === Step 2: Gmail ===
+
+  async function showGmailStep() {
+    buildStepper(1);
+    document.querySelectorAll('.step.active').forEach((s) => s.classList.remove('active'));
+    document.getElementById('step-gmail').classList.add('active');
+    state.currentStep = 2;
+
+    // Fetch setup data for the suggested email
+    const { data: setup } = await supabase
+      .from('agent_setups')
+      .select('name, step_data')
+      .eq('id', state.setupId)
+      .single();
+
+    // If email already created, show done state
+    if (setup?.step_data?.email) {
+      document.getElementById('gmail-loading').style.display = 'none';
+      document.getElementById('gmail-ready').style.display = 'none';
+      document.getElementById('gmail-done').style.display = '';
+      document.getElementById('email-created-display').textContent = setup.step_data.email;
+      // Auto-advance after a moment
+      setTimeout(() => {
+        buildStepper(2);
+        document.getElementById('step-gmail').classList.remove('active');
+        document.getElementById('step-3-placeholder').classList.add('active');
+        state.currentStep = 3;
+      }, 1500);
+      return;
+    }
+
+    const name = setup?.name || 'agent';
+    const baseName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const suggestedEmail = `${baseName}@saint.work`;
+
+    document.getElementById('email-display').textContent = suggestedEmail;
+    document.getElementById('gmail-loading').style.display = 'none';
+    document.getElementById('gmail-ready').style.display = '';
+  }
+
+  // Create email button
+  document.getElementById('create-email-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('create-email-btn');
+    const err = document.getElementById('email-error');
+    err.textContent = '';
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Creating...';
+
+    try {
+      const res = await fetch('/api/agents/create-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setupId: state.setupId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create email');
+
+      // Show success
+      document.getElementById('gmail-ready').style.display = 'none';
+      document.getElementById('gmail-done').style.display = '';
+      document.getElementById('email-created-display').textContent = data.email;
+
+      // Advance to step 3 after a moment
+      setTimeout(() => {
+        buildStepper(2);
+        document.getElementById('step-gmail').classList.remove('active');
+        document.getElementById('step-3-placeholder').classList.add('active');
+        state.currentStep = 3;
+      }, 2000);
+    } catch (error) {
+      err.textContent = error.message;
+      btn.disabled = false;
+      btn.innerHTML = 'Create Email &amp; Continue &rarr;';
+    }
+  });
+
+  // Update continue handler for in-progress cards
+  function continueSetup(setupId, step) {
+    state.setupId = setupId;
+    document.getElementById('step-landing').classList.remove('active');
+    if (step === 1) {
+      showGmailStep();
+    } else if (step >= 2) {
+      buildStepper(step);
+      document.getElementById('step-3-placeholder').classList.add('active');
+      state.currentStep = step + 1;
+    }
+  }
 </script>
 
 </body>
