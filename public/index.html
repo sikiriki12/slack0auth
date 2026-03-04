@@ -528,7 +528,7 @@
 <div class="container">
   <div class="header">
     <h1>New <span class="highlight">Employee</span></h1>
-    <p>12-step agent setup wizard</p>
+    <p>11-step agent setup wizard</p>
   </div>
 
   <!-- Stepper -->
@@ -851,7 +851,7 @@
   const supabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
 
   const STEP_LABELS = [
-    'Identity', 'Gmail', 'Google Cloud', 'Phone Login', 'WhatsApp',
+    'Identity', 'Gmail', 'Google Cloud', 'WhatsApp',
     'AI Account', 'Slack', 'Discord', 'Gateway', 'Config', 'WhatsApp GW', 'Ready'
   ];
 
@@ -1462,7 +1462,7 @@
   // --- Step 4: WhatsApp Setup ---
 
   async function showWhatsAppStep() {
-    buildStepper(4);
+    buildStepper(3);
     document.querySelectorAll('.step.active').forEach((s) => s.classList.remove('active'));
     document.getElementById('step-whatsapp').classList.add('active');
     state.currentStep = 4;
@@ -1487,7 +1487,7 @@
       document.getElementById('whatsapp-done').style.display = '';
       document.getElementById('whatsapp-done-name').textContent = agentName + ' Saint';
       setTimeout(() => {
-        buildStepper(5);
+        buildStepper(4);
         document.getElementById('step-whatsapp').classList.remove('active');
         document.getElementById('step-5-placeholder').classList.add('active');
         state.currentStep = 5;
@@ -1555,7 +1555,7 @@
 
       // Auto-advance to step 5
       setTimeout(() => {
-        buildStepper(5);
+        buildStepper(4);
         document.getElementById('step-whatsapp').classList.remove('active');
         document.getElementById('step-5-placeholder').classList.add('active');
         state.currentStep = 5;
