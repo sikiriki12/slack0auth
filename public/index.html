@@ -775,11 +775,60 @@
     </div>
   </div>
 
-  <!-- Step 4: Placeholder -->
-  <div id="step-4-placeholder" class="step">
+  <!-- Step 4: WhatsApp Setup -->
+  <div id="step-whatsapp" class="step">
+    <div id="whatsapp-loading" class="placeholder-step" style="padding-bottom: 1rem;">
+      <div class="spinner" style="width: 24px; height: 24px; margin: 0 auto 1rem; border-width: 3px; border-color: transparent; border-top-color: var(--accent);"></div>
+      <p style="color: var(--text-dim); font-size: 0.85rem;">Sending avatar to email...</p>
+    </div>
+
+    <div id="whatsapp-ready" style="display: none;">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#128242;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">WhatsApp Setup</h2>
+        <p style="font-size: 0.8rem; color: var(--text-dim);">Complete these steps on the agent's phone</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1.5rem;">
+        <label style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; text-transform: none; letter-spacing: 0; font-size: 0.85rem; color: var(--text); font-weight: 400; margin-bottom: 0;">
+          <input type="checkbox" class="whatsapp-check" id="wa-check-install" style="margin-top: 2px; accent-color: var(--accent); flex-shrink: 0;">
+          <span>Install <strong>WhatsApp</strong> from the Play Store</span>
+        </label>
+
+        <label style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; text-transform: none; letter-spacing: 0; font-size: 0.85rem; color: var(--text); font-weight: 400; margin-bottom: 0;">
+          <input type="checkbox" class="whatsapp-check" id="wa-check-register" style="margin-top: 2px; accent-color: var(--accent); flex-shrink: 0;">
+          <span>Register with phone number <strong id="wa-phone-display"></strong></span>
+        </label>
+
+        <label style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; text-transform: none; letter-spacing: 0; font-size: 0.85rem; color: var(--text); font-weight: 400; margin-bottom: 0;">
+          <input type="checkbox" class="whatsapp-check" id="wa-check-name" style="margin-top: 2px; accent-color: var(--accent); flex-shrink: 0;">
+          <span>Set display name to <strong id="wa-name-display"></strong></span>
+        </label>
+
+        <label style="display: flex; align-items: flex-start; gap: 0.75rem; padding: 0.75rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; text-transform: none; letter-spacing: 0; font-size: 0.85rem; color: var(--text); font-weight: 400; margin-bottom: 0;">
+          <input type="checkbox" class="whatsapp-check" id="wa-check-avatar" style="margin-top: 2px; accent-color: var(--accent); flex-shrink: 0;">
+          <span>Open avatar email on phone, save image, set as WhatsApp profile pic</span>
+        </label>
+      </div>
+
+      <button id="whatsapp-complete-btn" class="btn btn-primary btn-full" disabled>Complete WhatsApp Setup</button>
+      <div id="whatsapp-error" class="error"></div>
+    </div>
+
+    <div id="whatsapp-done" style="display: none;">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#9989;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">WhatsApp Ready</h2>
+        <p style="font-size: 0.9rem; color: var(--accent); margin-top: 0.5rem;" id="whatsapp-done-name"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 5: Placeholder -->
+  <div id="step-5-placeholder" class="step">
     <div class="placeholder-step">
-      <div class="icon">&#128241;</div>
-      <h2>Step 4: Phone Login</h2>
+      <div class="icon">&#129302;</div>
+      <h2>Step 5: AI Account</h2>
       <p>Coming soon</p>
     </div>
   </div>
@@ -1300,10 +1349,7 @@
       document.getElementById('gcloud-done').style.display = '';
       document.getElementById('gcloud-done-email').textContent = setup.step_data.email || '';
       setTimeout(() => {
-        buildStepper(3);
-        document.getElementById('step-gcloud').classList.remove('active');
-        document.getElementById('step-4-placeholder').classList.add('active');
-        state.currentStep = 4;
+        showWhatsAppStep();
       }, 1500);
       return;
     }
@@ -1407,14 +1453,119 @@
         document.getElementById('gcloud-done-email').textContent = setup.step_data.email || '';
         // Auto-advance after 2s
         setTimeout(() => {
-          buildStepper(3);
-          document.getElementById('step-gcloud').classList.remove('active');
-          document.getElementById('step-4-placeholder').classList.add('active');
-          state.currentStep = 4;
+          showWhatsAppStep();
         }, 2000);
       }
     }, 2000);
   }
+
+  // --- Step 4: WhatsApp Setup ---
+
+  async function showWhatsAppStep() {
+    buildStepper(4);
+    document.querySelectorAll('.step.active').forEach((s) => s.classList.remove('active'));
+    document.getElementById('step-whatsapp').classList.add('active');
+    state.currentStep = 4;
+
+    // Reset UI
+    document.getElementById('whatsapp-loading').style.display = '';
+    document.getElementById('whatsapp-ready').style.display = 'none';
+    document.getElementById('whatsapp-done').style.display = 'none';
+
+    // Fetch setup data
+    const { data: setup } = await supabase
+      .from('agent_setups')
+      .select('name, step_data')
+      .eq('id', state.setupId)
+      .single();
+
+    const agentName = setup?.name || 'Agent';
+
+    // If already completed, show done and advance
+    if (setup?.step_data?.whatsapp_completed_at) {
+      document.getElementById('whatsapp-loading').style.display = 'none';
+      document.getElementById('whatsapp-done').style.display = '';
+      document.getElementById('whatsapp-done-name').textContent = agentName + ' Saint';
+      setTimeout(() => {
+        buildStepper(5);
+        document.getElementById('step-whatsapp').classList.remove('active');
+        document.getElementById('step-5-placeholder').classList.add('active');
+        state.currentStep = 5;
+      }, 1500);
+      return;
+    }
+
+    // Send avatar email (non-fatal on failure)
+    try {
+      await fetch('/api/agents/send-avatar-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setupId: state.setupId }),
+      });
+    } catch (e) {
+      console.error('Avatar email send failed (non-fatal):', e);
+    }
+
+    // Show checklist
+    document.getElementById('whatsapp-loading').style.display = 'none';
+    document.getElementById('whatsapp-ready').style.display = '';
+
+    // Populate fields
+    document.getElementById('wa-phone-display').textContent = setup?.step_data?.phone_number || '';
+    document.getElementById('wa-name-display').textContent = agentName + ' Saint';
+  }
+
+  // Checkbox handler: enable complete button when all 4 checked
+  document.querySelectorAll('.whatsapp-check').forEach((cb) => {
+    cb.addEventListener('change', () => {
+      const allChecked = [...document.querySelectorAll('.whatsapp-check')].every((c) => c.checked);
+      document.getElementById('whatsapp-complete-btn').disabled = !allChecked;
+    });
+  });
+
+  // Complete button handler
+  document.getElementById('whatsapp-complete-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('whatsapp-complete-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Saving...';
+
+    try {
+      const res = await fetch('/api/agents/complete-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setupId: state.setupId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to complete');
+
+      // Fetch name for done state
+      const { data: setup } = await supabase
+        .from('agent_setups')
+        .select('name')
+        .eq('id', state.setupId)
+        .single();
+
+      const agentName = setup?.name || 'Agent';
+
+      // Show done state
+      document.getElementById('whatsapp-ready').style.display = 'none';
+      document.getElementById('whatsapp-done').style.display = '';
+      document.getElementById('whatsapp-done-name').textContent = agentName + ' Saint';
+
+      // Auto-advance to step 5
+      setTimeout(() => {
+        buildStepper(5);
+        document.getElementById('step-whatsapp').classList.remove('active');
+        document.getElementById('step-5-placeholder').classList.add('active');
+        state.currentStep = 5;
+      }, 2000);
+    } catch (error) {
+      btn.disabled = false;
+      btn.textContent = 'Complete WhatsApp Setup';
+      document.getElementById('whatsapp-error').textContent = error.message;
+    }
+  });
 
   // Update continue handler for in-progress cards
   function continueSetup(setupId, step) {
@@ -1424,9 +1575,11 @@
       showGmailStep();
     } else if (step === 2 || step === 3) {
       showGCloudStep();
-    } else if (step >= 4) {
+    } else if (step === 4) {
+      showWhatsAppStep();
+    } else if (step >= 5) {
       buildStepper(step);
-      document.getElementById('step-4-placeholder').classList.add('active');
+      document.getElementById('step-5-placeholder').classList.add('active');
       state.currentStep = step + 1;
     }
   }
