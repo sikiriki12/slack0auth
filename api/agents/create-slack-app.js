@@ -1,7 +1,4 @@
 import { supabase } from '../../lib/supabase.js';
-import { getConfigToken } from '../../lib/config-token.js';
-import { createManifest, SCOPES } from '../../lib/manifest.js';
-import { kv } from '@vercel/kv';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -33,43 +30,30 @@ export default async function handler(req, res) {
     const agentName = setup.name || 'Agent';
     const appName = `${agentName} Saint`;
 
-    const configToken = await getConfigToken();
+    // Call the existing provision endpoint internally
     const baseUrl = process.env.BASE_URL || `https://${process.env.VERCEL_URL}`;
-    const redirectUrl = `${baseUrl}/api/callback`;
-    const manifest = createManifest(appName, `${appName} - AI Employee`, redirectUrl);
-
-    // Create the Slack app
-    const createRes = await fetch('https://slack.com/api/apps.manifest.create', {
+    const provisionRes = await fetch(`${baseUrl}/api/provision`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${configToken}`,
+        Cookie: req.headers.cookie || '',
       },
-      body: JSON.stringify({ manifest }),
+      body: JSON.stringify({ name: appName, description: `${appName} - AI Employee` }),
     });
 
-    const createData = await createRes.json();
+    const provisionData = await provisionRes.json();
 
-    if (!createData.ok) {
-      throw new Error(createData.error || 'Slack app creation failed');
+    if (!provisionRes.ok) {
+      throw new Error(provisionData.error || 'Slack app provisioning failed');
     }
 
-    const { app_id, credentials } = createData;
-
-    const installUrl = `https://slack.com/oauth/v2/authorize?client_id=${credentials.client_id}&scope=${SCOPES.join(',')}&redirect_uri=${encodeURIComponent(redirectUrl)}&state=${app_id}`;
-
     const slackApp = {
-      appId: app_id,
-      clientId: credentials.client_id,
-      clientSecret: credentials.client_secret,
-      signingSecret: credentials.signing_secret,
-      installUrl,
-      name: appName,
-      createdAt: new Date().toISOString(),
+      appId: provisionData.appId,
+      clientId: provisionData.clientId,
+      installUrl: provisionData.installUrl,
+      name: provisionData.name,
+      createdAt: provisionData.createdAt,
     };
-
-    // Store in KV (for callback to find credentials later)
-    await kv.set(`app:${app_id}`, slackApp);
 
     // Store in agent setup
     const { error: updateError } = await supabase
@@ -87,8 +71,6 @@ export default async function handler(req, res) {
     if (updateError) {
       throw new Error('Failed to save Slack app to setup');
     }
-
-    console.log(`Provisioned Slack app for agent: ${appName} (${app_id})`);
 
     return res.status(200).json({ ok: true, slack_app: slackApp });
   } catch (error) {
