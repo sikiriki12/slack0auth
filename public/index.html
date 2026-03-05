@@ -1664,9 +1664,16 @@
         body: JSON.stringify({ setupId: state.setupId }),
       });
 
-      let data;
-      try { data = await res.json(); } catch { throw new Error(`Server error (${res.status})`); }
-      if (!res.ok) throw new Error(data.error || 'Failed to create Slack app');
+      const responseText = await res.text();
+      document.getElementById('slack-error').textContent = `${res.status}: ${responseText.slice(0, 300)}`;
+
+      if (!res.ok) {
+        let parsed;
+        try { parsed = JSON.parse(responseText); } catch {}
+        throw new Error(parsed?.error || `Server error ${res.status}: ${responseText.slice(0, 200)}`);
+      }
+
+      const data = JSON.parse(responseText);
 
       const { data: setup } = await supabase
         .from('agent_setups')
@@ -1674,6 +1681,7 @@
         .eq('id', state.setupId)
         .single();
 
+      document.getElementById('slack-error').textContent = '';
       showSlackDone(data.slack_app, setup?.name || 'Agent');
     } catch (error) {
       btn.disabled = false;
