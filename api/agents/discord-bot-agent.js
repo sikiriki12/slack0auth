@@ -38,7 +38,7 @@ export default async function handler(req, res) {
 
     const systemPrompt = "You are a bot setup automation agent. After completing the task, return the credentials as a JSON code block with keys: applicationId, clientId, clientSecret, botToken.";
 
-    const userPrompt = `Use browser profile "openclaw" for all browser actions. Log into Discord Developer Portal (https://discord.com/developers/applications) with email: ${discordEmail}, password: ${discordPassword}. Create a new application named '${botName}'. Go to the Bot tab and add a bot. Under Privileged Gateway Intents, enable: Presence Intent, Server Members Intent, Message Content Intent. Under Bot section > Authorization Flow, ensure 'Public Bot' is checked. Then collect and return as a JSON code block: applicationId (from General Information page), clientId (from OAuth2 page), clientSecret (click Reset Secret on OAuth2 page), botToken (click Reset Token on Bot page).`;
+    const userPrompt = `Log into Discord Developer Portal (https://discord.com/developers/applications) with email: ${discordEmail}, password: ${discordPassword}. Create a new application named '${botName}'. Go to the Bot tab and add a bot. Under Privileged Gateway Intents, enable: Presence Intent, Server Members Intent, Message Content Intent. Under Bot section > Authorization Flow, ensure 'Public Bot' is checked. Then collect and return as a JSON code block: applicationId (from General Information page), clientId (from OAuth2 page), clientSecret (click Reset Secret on OAuth2 page), botToken (click Reset Token on Bot page).`;
 
     // Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
