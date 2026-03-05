@@ -36,9 +36,12 @@ export default async function handler(req, res) {
     const agentName = setup.name || 'Agent';
     const botName = `${agentName} Saint`;
 
-    const systemPrompt = "You are a bot setup automation agent. Follow the steps exactly. Be concise — do not narrate. After completing all steps, return ONLY a JSON code block.";
+    const systemPrompt = "You are a bot setup automation agent. After completing the task, return the credentials as a JSON code block with keys: applicationId, clientId, clientSecret, botToken.";
 
-    const userPrompt = `Step 1: Navigate to https://discord.com/developers/applications
+    const userPrompt = `Log into Discord Developer Portal (https://discord.com/developers/applications) with email: ${discordEmail}, password: ${discordPassword}. Create a new application named '${botName}'. Go to the Bot tab and add a bot. Under Privileged Gateway Intents, enable: Presence Intent, Server Members Intent, Message Content Intent. Under Bot section > Authorization Flow, ensure 'Public Bot' is checked. Then collect and return as a JSON code block: applicationId (from General Information page), clientId (from OAuth2 page), clientSecret (click Reset Secret on OAuth2 page), botToken (click Reset Token on Bot page).
+
+Steps:
+Step 1: Navigate to https://discord.com/developers/applications
 Step 2: If not logged in, fill email field with ${discordEmail}, password field with ${discordPassword}, click Log In
 Step 3: Click "New Application", name it "${botName}", accept TOS, click Create
 Step 4: Note the Application ID from the URL or General Information page
