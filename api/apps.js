@@ -5,7 +5,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { appId, appToken } = req.body;
+  const { appId, appToken, setupId } = req.body;
 
   if (!appId || !appToken) {
     return res.status(400).json({ error: 'appId and appToken are required' });
@@ -28,6 +28,28 @@ export default async function handler(req, res) {
 
   if (updateError) {
     return res.status(500).json({ error: 'Failed to update app token' });
+  }
+
+  // Also update agent_setups step_data if setupId provided
+  if (setupId) {
+    const { data: setup } = await supabase
+      .from('agent_setups')
+      .select('step_data')
+      .eq('id', setupId)
+      .single();
+
+    if (setup) {
+      await supabase
+        .from('agent_setups')
+        .update({
+          step_data: {
+            ...setup.step_data,
+            slack_app: { ...setup.step_data.slack_app, appToken },
+          },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', setupId);
+    }
   }
 
   return res.status(200).json({ ...appData, app_token: appToken });

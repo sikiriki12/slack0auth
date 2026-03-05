@@ -1767,29 +1767,18 @@
       const slackApp = setup?.step_data?.slack_app;
       if (!slackApp) throw new Error('Slack app not found in setup');
 
-      // Save app token to slack_apps table
+      // Save app token to slack_apps table + agent_setups step_data (server-side)
       const res = await fetch('/api/apps', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ appId: slackApp.appId, appToken }),
+        body: JSON.stringify({ appId: slackApp.appId, appToken, setupId: state.setupId }),
       });
 
       let data;
       try { data = await res.json(); } catch { throw new Error(`Server error (${res.status})`); }
       if (!res.ok) throw new Error(data.error || 'Failed to save token');
 
-      // Update step_data with app token
       const updatedSlackApp = { ...slackApp, appToken };
-      const { error: updateErr } = await supabase
-        .from('agent_setups')
-        .update({
-          step_data: { ...setup.step_data, slack_app: updatedSlackApp },
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', state.setupId);
-
-      if (updateErr) throw new Error('Failed to save token to setup');
-
       tokenInput.disabled = true;
       btn.textContent = 'Saved';
       setTimeout(() => showSlackDistribution(updatedSlackApp), 800);
@@ -1807,26 +1796,24 @@
     btn.innerHTML = '<div class="spinner"></div> Saving...';
 
     try {
+      const res = await fetch('/api/agents/complete-slack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setupId: state.setupId }),
+      });
+
+      let data;
+      try { data = await res.json(); } catch { throw new Error(`Server error (${res.status})`); }
+      if (!res.ok) throw new Error(data.error || 'Failed to save distribution status');
+
+      // Fetch updated setup for done state
       const { data: setup } = await supabase
         .from('agent_setups')
         .select('name, step_data')
         .eq('id', state.setupId)
         .single();
 
-      const slackApp = { ...setup.step_data.slack_app, distributionConfirmed: true };
-
-      const { error: updateErr } = await supabase
-        .from('agent_setups')
-        .update({
-          current_step: 5,
-          step_data: { ...setup.step_data, slack_app: slackApp },
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', state.setupId);
-
-      if (updateErr) throw new Error('Failed to save distribution status');
-
-      showSlackDone(slackApp, setup?.name || 'Agent');
+      showSlackDone(setup.step_data.slack_app, setup?.name || 'Agent');
     } catch (error) {
       btn.disabled = false;
       btn.textContent = "I've activated public distribution";
