@@ -19,9 +19,7 @@ export async function completeOAuth(code, appId) {
       client_id: appData.client_id,
       client_secret: appData.client_secret,
       code,
-      redirect_uri: process.env.BASE_URL
-        ? `${process.env.BASE_URL}/api/callback`
-        : `https://${process.env.VERCEL_URL}/api/callback`,
+      redirect_uri: `${(process.env.BASE_URL || `https://${process.env.VERCEL_URL}`).replace(/\/+$/, '')}/api/callback`,
     }),
   });
 

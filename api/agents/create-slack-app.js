@@ -33,7 +33,7 @@ export default async function handler(req, res) {
     const appName = `${agentName} Saint`;
 
     const configToken = await getConfigToken();
-    const baseUrl = process.env.BASE_URL || `https://${process.env.VERCEL_URL}`;
+    const baseUrl = (process.env.BASE_URL || `https://${process.env.VERCEL_URL}`).replace(/\/+$/, '');
     const redirectUrl = `${baseUrl}/api/callback`;
     const manifest = createManifest(appName, `${appName} - AI Employee`, redirectUrl);
 
