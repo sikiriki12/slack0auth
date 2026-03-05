@@ -1,10 +1,14 @@
-import { kv } from '@vercel/kv';
+import { supabase } from '../lib/supabase.js';
 
 export async function completeOAuth(code, appId) {
-  // Look up app credentials from KV
-  const appData = await kv.get(`app:${appId}`);
+  // Look up app credentials from Supabase
+  const { data: appData, error } = await supabase
+    .from('slack_apps')
+    .select('*')
+    .eq('app_id', appId)
+    .single();
 
-  if (!appData) {
+  if (error || !appData) {
     throw new Error(`App ${appId} not found`);
   }
 
@@ -12,8 +16,8 @@ export async function completeOAuth(code, appId) {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      client_id: appData.clientId,
-      client_secret: appData.clientSecret,
+      client_id: appData.client_id,
+      client_secret: appData.client_secret,
       code,
       redirect_uri: process.env.BASE_URL
         ? `${process.env.BASE_URL}/api/callback`
@@ -36,21 +40,25 @@ export async function completeOAuth(code, appId) {
     }),
   });
 
-  // Update KV with install data
-  const updatedAppData = {
-    ...appData,
-    botToken: data.access_token,
-    teamId: data.team.id,
-    teamName: data.team.name,
-    installedBy: data.authed_user.id,
-    installedAt: new Date().toISOString(),
-  };
+  // Update Supabase with install data
+  const { error: updateError } = await supabase
+    .from('slack_apps')
+    .update({
+      bot_token: data.access_token,
+      team_id: data.team.id,
+      team_name: data.team.name,
+      installed_by: data.authed_user.id,
+      installed_at: new Date().toISOString(),
+    })
+    .eq('app_id', appId);
 
-  await kv.set(`app:${appId}`, updatedAppData);
+  if (updateError) {
+    console.error('Failed to update app with install data:', updateError);
+  }
 
   console.log(`New install: ${data.team.name} | App: ${appData.name} | Token: ${data.access_token}`);
 
-  return updatedAppData;
+  return { ...appData, bot_token: data.access_token, team_id: data.team.id, team_name: data.team.name };
 }
 
 export default async function handler(req, res) {

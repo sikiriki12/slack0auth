@@ -1,4 +1,4 @@
-import { kv } from '@vercel/kv';
+import { supabase } from '../lib/supabase.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'PATCH') {
@@ -11,14 +11,24 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'appId and appToken are required' });
   }
 
-  const appData = await kv.get(`app:${appId}`);
+  const { data: appData, error: fetchError } = await supabase
+    .from('slack_apps')
+    .select('*')
+    .eq('app_id', appId)
+    .single();
 
-  if (!appData) {
+  if (fetchError || !appData) {
     return res.status(404).json({ error: 'App not found' });
   }
 
-  const updated = { ...appData, appToken };
-  await kv.set(`app:${appId}`, updated);
+  const { error: updateError } = await supabase
+    .from('slack_apps')
+    .update({ app_token: appToken })
+    .eq('app_id', appId);
 
-  return res.status(200).json(updated);
+  if (updateError) {
+    return res.status(500).json({ error: 'Failed to update app token' });
+  }
+
+  return res.status(200).json({ ...appData, app_token: appToken });
 }

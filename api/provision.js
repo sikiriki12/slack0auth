@@ -1,4 +1,4 @@
-import { kv } from '@vercel/kv';
+import { supabase } from '../lib/supabase.js';
 import { getConfigToken } from '../lib/config-token.js';
 import { createManifest, SCOPES } from '../lib/manifest.js';
 
@@ -40,6 +40,27 @@ export default async function handler(req, res) {
   const installUrl = `https://slack.com/oauth/v2/authorize?client_id=${credentials.client_id}&scope=${SCOPES.join(',')}&redirect_uri=${encodeURIComponent(redirectUrl)}&state=${app_id}`;
 
   const appData = {
+    app_id,
+    client_id: credentials.client_id,
+    client_secret: credentials.client_secret,
+    signing_secret: credentials.signing_secret,
+    install_url: installUrl,
+    name,
+  };
+
+  const { error: insertError } = await supabase
+    .from('slack_apps')
+    .insert(appData);
+
+  if (insertError) {
+    console.error('Failed to store Slack app:', insertError);
+    return res.status(500).json({ error: 'Failed to store app data' });
+  }
+
+  console.log(`Provisioned app: ${name} (${app_id})`);
+
+  // Return camelCase for API consumers
+  return res.status(200).json({
     appId: app_id,
     clientId: credentials.client_id,
     clientSecret: credentials.client_secret,
@@ -47,11 +68,5 @@ export default async function handler(req, res) {
     installUrl,
     name,
     createdAt: new Date().toISOString(),
-  };
-
-  await kv.set(`app:${app_id}`, appData);
-
-  console.log(`Provisioned app: ${name} (${app_id})`);
-
-  return res.status(200).json(appData);
+  });
 }

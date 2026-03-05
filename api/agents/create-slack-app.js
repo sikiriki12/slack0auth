@@ -1,6 +1,7 @@
 import { supabase } from '../../lib/supabase.js';
+import { getConfigToken } from '../../lib/config-token.js';
+import { createManifest, SCOPES } from '../../lib/manifest.js';
 
-// Provisions a Slack app for the agent via /api/provision
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -31,29 +32,47 @@ export default async function handler(req, res) {
     const agentName = setup.name || 'Agent';
     const appName = `${agentName} Saint`;
 
-    // Call the existing provision endpoint internally
+    const configToken = await getConfigToken();
     const baseUrl = process.env.BASE_URL || `https://${process.env.VERCEL_URL}`;
-    const provisionRes = await fetch(`${baseUrl}/api/provision`, {
+    const redirectUrl = `${baseUrl}/api/callback`;
+    const manifest = createManifest(appName, `${appName} - AI Employee`, redirectUrl);
+
+    // Create the Slack app
+    const createRes = await fetch('https://slack.com/api/apps.manifest.create', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Cookie: req.headers.cookie || '',
+        Authorization: `Bearer ${configToken}`,
       },
-      body: JSON.stringify({ name: appName, description: `${appName} - AI Employee` }),
+      body: JSON.stringify({ manifest }),
     });
 
-    const provisionData = await provisionRes.json();
+    const createData = await createRes.json();
 
-    if (!provisionRes.ok) {
-      throw new Error(provisionData.error || 'Slack app provisioning failed');
+    if (!createData.ok) {
+      throw new Error(createData.error || 'Slack app creation failed');
     }
 
+    const { app_id, credentials } = createData;
+
+    const installUrl = `https://slack.com/oauth/v2/authorize?client_id=${credentials.client_id}&scope=${SCOPES.join(',')}&redirect_uri=${encodeURIComponent(redirectUrl)}&state=${app_id}`;
+
+    // Store in slack_apps table
+    await supabase.from('slack_apps').insert({
+      app_id,
+      client_id: credentials.client_id,
+      client_secret: credentials.client_secret,
+      signing_secret: credentials.signing_secret,
+      install_url: installUrl,
+      name: appName,
+    });
+
     const slackApp = {
-      appId: provisionData.appId,
-      clientId: provisionData.clientId,
-      installUrl: provisionData.installUrl,
-      name: provisionData.name,
-      createdAt: provisionData.createdAt,
+      appId: app_id,
+      clientId: credentials.client_id,
+      installUrl,
+      name: appName,
+      createdAt: new Date().toISOString(),
     };
 
     // Store in agent setup
