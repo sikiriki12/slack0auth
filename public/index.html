@@ -1303,6 +1303,7 @@
 
     try {
       const recoveryPhone = document.getElementById('recovery-phone').value.trim();
+      if (!recoveryPhone) throw new Error('Recovery phone is required');
       const res = await fetch('/api/agents/create-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
