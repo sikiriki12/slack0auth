@@ -831,9 +831,20 @@
 
   <!-- Step 5: Slack App -->
   <div id="step-slack" class="step">
-    <div id="slack-loading" class="placeholder-step" style="padding-bottom: 1rem;">
-      <div class="spinner" style="width: 24px; height: 24px; margin: 0 auto 1rem; border-width: 3px; border-color: transparent; border-top-color: var(--accent);"></div>
-      <p style="color: var(--text-dim); font-size: 0.85rem;">Creating Slack app...</p>
+    <div id="slack-ready" style="display: none;">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#128172;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Create Slack App</h2>
+        <p style="font-size: 0.8rem; color: var(--text-dim);">Provision a Slack bot for this agent</p>
+      </div>
+
+      <div class="field">
+        <label>App name</label>
+        <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem; font-size: 0.9rem; color: var(--accent);" id="slack-app-name-display"></div>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="slack-create-btn">Create Slack App &rarr;</button>
+      <div id="slack-error" class="error"></div>
     </div>
 
     <div id="slack-done" style="display: none;">
@@ -851,15 +862,6 @@
         </div>
         <p style="font-size: 0.7rem; color: var(--text-dim); margin-top: 0.35rem;">Share this with users to connect the agent to their Slack workspace</p>
       </div>
-    </div>
-
-    <div id="slack-error-state" style="display: none;">
-      <div style="text-align: center; margin-bottom: 1.5rem;">
-        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#10060;</div>
-        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Slack App Failed</h2>
-        <p id="slack-error" style="font-size: 0.85rem; color: var(--error); margin-top: 0.5rem;"></p>
-      </div>
-      <button class="btn btn-primary btn-full" id="slack-retry-btn">Retry</button>
     </div>
   </div>
 
@@ -1610,9 +1612,8 @@
     state.currentStep = 5;
 
     // Reset UI
-    document.getElementById('slack-loading').style.display = '';
+    document.getElementById('slack-ready').style.display = 'none';
     document.getElementById('slack-done').style.display = 'none';
-    document.getElementById('slack-error-state').style.display = 'none';
 
     // Fetch setup data
     const { data: setup } = await supabase
@@ -1629,27 +1630,13 @@
       return;
     }
 
-    // Provision the Slack app
-    try {
-      const res = await fetch('/api/agents/create-slack-app', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ setupId: state.setupId }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to create Slack app');
-
-      showSlackDone(data.slack_app, agentName);
-    } catch (error) {
-      document.getElementById('slack-loading').style.display = 'none';
-      document.getElementById('slack-error-state').style.display = '';
-      document.getElementById('slack-error').textContent = error.message;
-    }
+    // Show ready state with app name preview
+    document.getElementById('slack-ready').style.display = '';
+    document.getElementById('slack-app-name-display').textContent = agentName + ' Saint';
   }
 
   function showSlackDone(slackApp, agentName) {
-    document.getElementById('slack-loading').style.display = 'none';
+    document.getElementById('slack-ready').style.display = 'none';
     document.getElementById('slack-done').style.display = '';
     document.getElementById('slack-done-name').textContent = agentName + ' Saint';
     document.getElementById('slack-install-url').textContent = slackApp.installUrl;
@@ -1663,9 +1650,35 @@
     }, 2000);
   }
 
-  // Slack retry button
-  document.getElementById('slack-retry-btn').addEventListener('click', () => {
-    showSlackStep();
+  // Create Slack app button
+  document.getElementById('slack-create-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('slack-create-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Creating...';
+    document.getElementById('slack-error').textContent = '';
+
+    try {
+      const res = await fetch('/api/agents/create-slack-app', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setupId: state.setupId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to create Slack app');
+
+      const { data: setup } = await supabase
+        .from('agent_setups')
+        .select('name')
+        .eq('id', state.setupId)
+        .single();
+
+      showSlackDone(data.slack_app, setup?.name || 'Agent');
+    } catch (error) {
+      btn.disabled = false;
+      btn.textContent = 'Create Slack App \u2192';
+      document.getElementById('slack-error').textContent = error.message;
+    }
   });
 
   // Update continue handler for in-progress cards
