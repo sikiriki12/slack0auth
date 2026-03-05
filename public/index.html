@@ -910,11 +910,125 @@
     </div>
   </div>
 
-  <!-- Step 6: Placeholder -->
-  <div id="step-6-placeholder" class="step">
+  <!-- Step 6: Discord Bot -->
+  <div id="step-discord" class="step">
+    <!-- Choose path: auto vs manual -->
+    <div id="discord-choose" style="display: none;">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#129302;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Discord Bot Setup</h2>
+        <p style="font-size: 0.8rem; color: var(--text-dim);">Create a Discord bot for this agent</p>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <button class="btn btn-primary btn-full" id="discord-auto-btn">Auto-create with AI</button>
+        <button class="btn btn-full" id="discord-manual-btn" style="background: var(--surface); border: 1px solid var(--border); color: var(--text-mid);">Set up manually</button>
+      </div>
+    </div>
+
+    <!-- Auto path: streaming agent output -->
+    <div id="discord-agent" style="display: none;">
+      <div style="text-align: center; margin-bottom: 1rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#129302;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Creating Discord Bot</h2>
+        <p style="font-size: 0.8rem; color: var(--text-dim);">AI agent is setting up your bot...</p>
+      </div>
+
+      <div id="discord-agent-output" style="background: #0d0d14; border: 1px solid var(--border); border-radius: 10px; padding: 1rem; font-family: monospace; font-size: 0.75rem; color: #a0ffa0; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; line-height: 1.5; margin-bottom: 1rem;"></div>
+
+      <div id="discord-agent-status" style="text-align: center; font-size: 0.8rem; color: var(--text-dim);">
+        <div style="display: flex; justify-content: center; align-items: center; gap: 0.5rem;">
+          <div class="spinner"></div> Running...
+        </div>
+      </div>
+      <div id="discord-agent-error" class="error"></div>
+    </div>
+
+    <!-- Manual path: paste credentials -->
+    <div id="discord-manual" style="display: none;">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#129302;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Manual Discord Setup</h2>
+        <p style="font-size: 0.8rem; color: var(--text-dim);">Follow these steps, then paste the credentials below</p>
+      </div>
+
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.8rem; color: var(--text-mid); line-height: 1.6;">
+        <strong style="color: var(--text); display: block; margin-bottom: 0.5rem;">Instructions:</strong>
+        1. Go to <a href="https://discord.com/developers/applications" target="_blank" rel="noopener" style="color: var(--accent);">Discord Developer Portal</a><br>
+        2. Click <strong style="color: var(--text);">New Application</strong> &rarr; name it <strong style="color: var(--accent);" id="discord-manual-bot-name"></strong><br>
+        3. Go to <strong style="color: var(--text);">Bot</strong> tab &rarr; click <strong style="color: var(--text);">Add Bot</strong><br>
+        4. Under <strong style="color: var(--text);">Privileged Gateway Intents</strong>, enable:<br>
+        &nbsp;&nbsp;&bull; Presence Intent<br>
+        &nbsp;&nbsp;&bull; Server Members Intent<br>
+        &nbsp;&nbsp;&bull; Message Content Intent<br>
+        5. Under <strong style="color: var(--text);">Authorization Flow</strong>, ensure <strong style="color: var(--text);">Public Bot</strong> is checked
+      </div>
+
+      <div class="field">
+        <label>Application ID</label>
+        <input type="text" id="discord-application-id" placeholder="From General Information page">
+      </div>
+      <div class="field">
+        <label>Client ID</label>
+        <input type="text" id="discord-client-id" placeholder="From OAuth2 page">
+      </div>
+      <div class="field">
+        <label>Client Secret</label>
+        <input type="text" id="discord-client-secret" placeholder="Click Reset Secret on OAuth2 page">
+      </div>
+      <div class="field">
+        <label>Bot Token</label>
+        <input type="text" id="discord-bot-token" placeholder="Click Reset Token on Bot page">
+      </div>
+
+      <button class="btn btn-primary btn-full" id="discord-manual-save-btn" disabled>Validate &amp; Save</button>
+      <div id="discord-manual-error" class="error"></div>
+    </div>
+
+    <!-- Review: show install URL -->
+    <div id="discord-review" style="display: none;">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#129302;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Discord Bot Created</h2>
+        <p style="font-size: 0.8rem; color: var(--text-dim);">Review and confirm the bot setup</p>
+      </div>
+
+      <div class="field">
+        <label>Install URL</label>
+        <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem;">
+          <span id="discord-review-install-url" style="font-size: 0.75rem; color: var(--text-mid); word-break: break-all; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+          <span class="copy-icon" onclick="copyText(this, 'discord-review-install-url')">&#128203;</span>
+        </div>
+        <p style="font-size: 0.7rem; color: var(--text-dim); margin-top: 0.35rem;">Share this URL to add the bot to a Discord server</p>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="discord-confirm-btn">Confirm &amp; Continue &rarr;</button>
+      <div id="discord-review-error" class="error"></div>
+    </div>
+
+    <!-- Done state -->
+    <div id="discord-done" style="display: none;">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#9989;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Discord Bot Ready</h2>
+        <p style="font-size: 0.9rem; color: var(--accent); margin-top: 0.5rem;" id="discord-done-name"></p>
+      </div>
+
+      <div class="field">
+        <label>Install URL</label>
+        <div style="display: flex; align-items: center; gap: 0.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.75rem 1rem;">
+          <span id="discord-done-install-url" style="font-size: 0.75rem; color: var(--text-mid); word-break: break-all; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></span>
+          <span class="copy-icon" onclick="copyText(this, 'discord-done-install-url')">&#128203;</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 7: Placeholder -->
+  <div id="step-7-placeholder" class="step">
     <div class="placeholder-step">
       <div class="icon">&#129302;</div>
-      <h2>Step 6: AI Account</h2>
+      <h2>Step 7: AI Account</h2>
       <p>Coming soon</p>
     </div>
   </div>
@@ -938,7 +1052,7 @@
 
   const STEP_LABELS = [
     'Identity', 'Gmail', 'Google Cloud', 'WhatsApp',
-    'Slack', 'AI Account', 'Discord', 'Gateway', 'Config', 'WhatsApp GW', 'Ready'
+    'Slack', 'Discord', 'AI Account', 'Gateway', 'Config', 'WhatsApp GW', 'Ready'
   ];
 
   // State
@@ -1705,13 +1819,8 @@
     document.getElementById('slack-done-name').textContent = agentName + ' Saint';
     document.getElementById('slack-install-url').textContent = slackApp.installUrl;
 
-    // Auto-advance to step 6
-    setTimeout(() => {
-      buildStepper(5);
-      document.getElementById('step-slack').classList.remove('active');
-      document.getElementById('step-6-placeholder').classList.add('active');
-      state.currentStep = 6;
-    }, 2000);
+    // Auto-advance to step 6 (Discord)
+    setTimeout(() => showDiscordStep(), 2000);
   }
 
   // Sub-step 1: Create Slack app
@@ -1820,6 +1929,277 @@
     }
   });
 
+  // --- Step 6: Discord Bot ---
+
+  async function showDiscordStep() {
+    buildStepper(5);
+    document.querySelectorAll('.step.active').forEach((s) => s.classList.remove('active'));
+    document.getElementById('step-discord').classList.add('active');
+    state.currentStep = 6;
+
+    // Reset all sub-views
+    document.getElementById('discord-choose').style.display = 'none';
+    document.getElementById('discord-agent').style.display = 'none';
+    document.getElementById('discord-manual').style.display = 'none';
+    document.getElementById('discord-review').style.display = 'none';
+    document.getElementById('discord-done').style.display = 'none';
+
+    // Fetch setup data
+    const { data: setup } = await supabase
+      .from('agent_setups')
+      .select('name, step_data')
+      .eq('id', state.setupId)
+      .single();
+
+    const agentName = setup?.name || 'Agent';
+    const discordBot = setup?.step_data?.discord_bot;
+
+    // Resume logic
+    if (discordBot?.confirmed) {
+      showDiscordDone(discordBot, agentName);
+    } else if (discordBot?.applicationId) {
+      showDiscordReview(discordBot);
+    } else {
+      document.getElementById('discord-choose').style.display = '';
+      document.getElementById('discord-manual-bot-name').textContent = agentName + ' Saint';
+    }
+  }
+
+  function showDiscordAgent() {
+    document.getElementById('discord-choose').style.display = 'none';
+    document.getElementById('discord-agent').style.display = '';
+    document.getElementById('discord-agent-output').textContent = '';
+    document.getElementById('discord-agent-error').textContent = '';
+    document.getElementById('discord-agent-status').style.display = '';
+
+    fetch('/api/agents/discord-bot-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ setupId: state.setupId }),
+    }).then(async (res) => {
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Agent request failed');
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      const outputEl = document.getElementById('discord-agent-output');
+      let fullText = '';
+      let lineBuf = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        lineBuf += decoder.decode(value, { stream: true });
+
+        // Process only complete lines (newline-terminated)
+        const parts = lineBuf.split('\n');
+        lineBuf = parts.pop(); // keep incomplete trailing fragment
+
+        for (const line of parts) {
+          if (!line.startsWith('data: ')) continue;
+          const payload = line.slice(6);
+          try {
+            const parsed = JSON.parse(payload);
+            if (parsed.error) {
+              document.getElementById('discord-agent-error').textContent = parsed.error;
+              continue;
+            }
+            const text = parsed.text || parsed.content || parsed.delta || '';
+            if (text) {
+              fullText += text;
+              outputEl.textContent = fullText;
+              outputEl.scrollTop = outputEl.scrollHeight;
+            }
+          } catch {
+            const text = payload.trim();
+            if (text && text !== '[DONE]') {
+              fullText += text;
+              outputEl.textContent = fullText;
+              outputEl.scrollTop = outputEl.scrollHeight;
+            }
+          }
+        }
+      }
+
+      // Process any remaining buffered data
+      if (lineBuf.startsWith('data: ')) {
+        const payload = lineBuf.slice(6);
+        try {
+          const parsed = JSON.parse(payload);
+          const text = parsed.text || parsed.content || parsed.delta || '';
+          if (text) { fullText += text; }
+        } catch {
+          const text = payload.trim();
+          if (text && text !== '[DONE]') { fullText += text; }
+        }
+      }
+
+      // Stream complete — try to extract JSON credentials
+      document.getElementById('discord-agent-status').style.display = 'none';
+
+      const jsonMatch = fullText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+      if (jsonMatch) {
+        try {
+          const creds = JSON.parse(jsonMatch[1]);
+          if (creds.applicationId && creds.clientId && creds.clientSecret && creds.botToken) {
+            // Validate and save via API
+            outputEl.textContent += '\n\nCredentials found. Validating...';
+            outputEl.scrollTop = outputEl.scrollHeight;
+
+            const saveRes = await fetch('/api/agents/create-discord-bot', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ setupId: state.setupId, ...creds }),
+            });
+
+            const saveData = await saveRes.json();
+            if (!saveRes.ok) throw new Error(saveData.error || 'Validation failed');
+
+            showDiscordReview(saveData.discord_bot);
+            return;
+          }
+        } catch (parseErr) {
+          document.getElementById('discord-agent-error').textContent = 'Failed to parse credentials: ' + parseErr.message;
+        }
+      }
+
+      showDiscordAgentFallback('Could not extract credentials from agent output.');
+    }).catch((error) => {
+      document.getElementById('discord-agent-status').style.display = 'none';
+      showDiscordAgentFallback(error.message);
+    });
+  }
+
+  function showDiscordAgentFallback(message) {
+    document.getElementById('discord-agent-status').style.display = 'none';
+    const errEl = document.getElementById('discord-agent-error');
+    errEl.innerHTML = '';
+    errEl.textContent = message + ' ';
+    const fallbackBtn = document.createElement('a');
+    fallbackBtn.textContent = 'Switch to manual setup';
+    fallbackBtn.href = '#';
+    fallbackBtn.style.cssText = 'color: var(--accent); text-decoration: underline; cursor: pointer;';
+    fallbackBtn.addEventListener('click', (e) => { e.preventDefault(); showDiscordManual(); });
+    errEl.appendChild(fallbackBtn);
+  }
+
+  function showDiscordManual() {
+    document.getElementById('discord-choose').style.display = 'none';
+    document.getElementById('discord-manual').style.display = '';
+  }
+
+  function showDiscordReview(discordBot) {
+    document.getElementById('discord-choose').style.display = 'none';
+    document.getElementById('discord-agent').style.display = 'none';
+    document.getElementById('discord-manual').style.display = 'none';
+    document.getElementById('discord-review').style.display = '';
+    document.getElementById('discord-review-install-url').textContent = discordBot.installUrl;
+  }
+
+  function showDiscordDone(discordBot, agentName) {
+    document.getElementById('discord-choose').style.display = 'none';
+    document.getElementById('discord-agent').style.display = 'none';
+    document.getElementById('discord-manual').style.display = 'none';
+    document.getElementById('discord-review').style.display = 'none';
+    document.getElementById('discord-done').style.display = '';
+    document.getElementById('discord-done-name').textContent = (agentName || discordBot.name || 'Agent') + ' Saint';
+    document.getElementById('discord-done-install-url').textContent = discordBot.installUrl;
+
+    // Auto-advance to step 7 (AI Account placeholder)
+    setTimeout(() => {
+      buildStepper(6);
+      document.getElementById('step-discord').classList.remove('active');
+      document.getElementById('step-7-placeholder').classList.add('active');
+      state.currentStep = 7;
+    }, 2000);
+  }
+
+  // Auto path button
+  document.getElementById('discord-auto-btn').addEventListener('click', () => showDiscordAgent());
+
+  // Manual path button
+  document.getElementById('discord-manual-btn').addEventListener('click', () => showDiscordManual());
+
+  // Manual: enable save button when all fields filled
+  function updateDiscordManualBtn() {
+    const appId = document.getElementById('discord-application-id').value.trim();
+    const clientId = document.getElementById('discord-client-id').value.trim();
+    const clientSecret = document.getElementById('discord-client-secret').value.trim();
+    const botToken = document.getElementById('discord-bot-token').value.trim();
+    document.getElementById('discord-manual-save-btn').disabled = !appId || !clientId || !clientSecret || !botToken;
+  }
+
+  ['discord-application-id', 'discord-client-id', 'discord-client-secret', 'discord-bot-token'].forEach((id) => {
+    document.getElementById(id).addEventListener('input', updateDiscordManualBtn);
+  });
+
+  // Manual: validate & save
+  document.getElementById('discord-manual-save-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('discord-manual-save-btn');
+    const err = document.getElementById('discord-manual-error');
+    err.textContent = '';
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Validating...';
+
+    try {
+      const res = await fetch('/api/agents/create-discord-bot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setupId: state.setupId,
+          applicationId: document.getElementById('discord-application-id').value.trim(),
+          clientId: document.getElementById('discord-client-id').value.trim(),
+          clientSecret: document.getElementById('discord-client-secret').value.trim(),
+          botToken: document.getElementById('discord-bot-token').value.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Validation failed');
+
+      showDiscordReview(data.discord_bot);
+    } catch (error) {
+      err.textContent = error.message;
+      btn.disabled = false;
+      btn.innerHTML = 'Validate &amp; Save';
+    }
+  });
+
+  // Review: confirm & continue
+  document.getElementById('discord-confirm-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('discord-confirm-btn');
+    const err = document.getElementById('discord-review-error');
+    err.textContent = '';
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Saving...';
+
+    try {
+      const res = await fetch('/api/agents/complete-discord', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setupId: state.setupId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to confirm');
+
+      // Fetch updated setup for done state
+      const { data: setup } = await supabase
+        .from('agent_setups')
+        .select('name, step_data')
+        .eq('id', state.setupId)
+        .single();
+
+      showDiscordDone(setup.step_data.discord_bot, setup?.name || 'Agent');
+    } catch (error) {
+      err.textContent = error.message;
+      btn.disabled = false;
+      btn.innerHTML = 'Confirm &amp; Continue &rarr;';
+    }
+  });
+
   // Update continue handler for in-progress cards
   function continueSetup(setupId, step) {
     state.setupId = setupId;
@@ -1832,9 +2212,11 @@
       showWhatsAppStep();
     } else if (step === 5) {
       showSlackStep();
-    } else if (step >= 6) {
+    } else if (step === 6) {
+      showDiscordStep();
+    } else if (step >= 7) {
       buildStepper(step);
-      document.getElementById('step-6-placeholder').classList.add('active');
+      document.getElementById('step-7-placeholder').classList.add('active');
       state.currentStep = step + 1;
     }
   }
