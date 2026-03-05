@@ -831,7 +831,8 @@
 
   <!-- Step 5: Slack App -->
   <div id="step-slack" class="step">
-    <div id="slack-ready" style="display: none;">
+    <!-- Sub-step 1: Create app -->
+    <div id="slack-create" style="display: none;">
       <div style="text-align: center; margin-bottom: 1.5rem;">
         <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#128172;</div>
         <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Create Slack App</h2>
@@ -847,10 +848,54 @@
       <div id="slack-error" class="error"></div>
     </div>
 
+    <!-- Sub-step 2: App token -->
+    <div id="slack-token" style="display: none;">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#128273;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Generate App Token</h2>
+        <p style="font-size: 0.8rem; color: var(--text-dim);">Required for socket mode connection</p>
+      </div>
+
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; font-size: 0.8rem; color: var(--text-mid); line-height: 1.6;">
+        Open the app settings and generate an <strong style="color: var(--text);">App-Level Token</strong> with the <strong style="color: var(--text);">connections:write</strong> scope.
+        <div style="margin-top: 0.75rem;">
+          <a id="slack-settings-link" href="#" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: none; font-size: 0.8rem;">Open in Slack settings &rarr;</a>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>App-level token</label>
+        <div style="display: flex; gap: 0.5rem;">
+          <input type="text" id="slack-app-token" placeholder="xapp-..." style="flex: 1;">
+          <button class="btn btn-primary" id="slack-save-token-btn" style="white-space: nowrap;">Save</button>
+        </div>
+        <div id="slack-token-error" class="error"></div>
+      </div>
+    </div>
+
+    <!-- Sub-step 3: Public distribution -->
+    <div id="slack-distribution" style="display: none;">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#127760;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Activate Public Distribution</h2>
+        <p style="font-size: 0.8rem; color: var(--text-dim);">Allows the app to be installed in any workspace</p>
+      </div>
+
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.8rem; color: var(--text-mid); line-height: 1.6;">
+        Open the distribution settings, check the <strong style="color: var(--text);">"I've reviewed"</strong> checkbox, and click <strong style="color: var(--text);">Activate Public Distribution</strong>.
+        <div style="margin-top: 0.75rem;">
+          <a id="slack-distribution-link" href="#" target="_blank" rel="noopener" style="color: var(--accent); text-decoration: none; font-size: 0.8rem;">Open distribution settings &rarr;</a>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="slack-confirm-distribution-btn">I've activated public distribution</button>
+    </div>
+
+    <!-- Done state -->
     <div id="slack-done" style="display: none;">
       <div style="text-align: center; margin-bottom: 2rem;">
         <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#9989;</div>
-        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Slack App Created</h2>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Slack App Ready</h2>
         <p style="font-size: 0.9rem; color: var(--accent); margin-top: 0.5rem;" id="slack-done-name"></p>
       </div>
 
@@ -1612,7 +1657,9 @@
     state.currentStep = 5;
 
     // Reset UI
-    document.getElementById('slack-ready').style.display = 'none';
+    document.getElementById('slack-create').style.display = 'none';
+    document.getElementById('slack-token').style.display = 'none';
+    document.getElementById('slack-distribution').style.display = 'none';
     document.getElementById('slack-done').style.display = 'none';
 
     // Fetch setup data
@@ -1623,20 +1670,37 @@
       .single();
 
     const agentName = setup?.name || 'Agent';
+    const slackApp = setup?.step_data?.slack_app;
 
-    // If already provisioned, show done and advance
-    if (setup?.step_data?.slack_app) {
-      showSlackDone(setup.step_data.slack_app, agentName);
-      return;
+    // Resume logic based on what's already done
+    if (slackApp?.distributionConfirmed) {
+      showSlackDone(slackApp, agentName);
+    } else if (slackApp?.appToken) {
+      showSlackDistribution(slackApp);
+    } else if (slackApp?.appId) {
+      showSlackTokenStep(slackApp);
+    } else {
+      document.getElementById('slack-create').style.display = '';
+      document.getElementById('slack-app-name-display').textContent = agentName + ' Saint';
     }
+  }
 
-    // Show ready state with app name preview
-    document.getElementById('slack-ready').style.display = '';
-    document.getElementById('slack-app-name-display').textContent = agentName + ' Saint';
+  function showSlackTokenStep(slackApp) {
+    document.getElementById('slack-create').style.display = 'none';
+    document.getElementById('slack-token').style.display = '';
+    document.getElementById('slack-settings-link').href = `https://api.slack.com/apps/${slackApp.appId}`;
+  }
+
+  function showSlackDistribution(slackApp) {
+    document.getElementById('slack-token').style.display = 'none';
+    document.getElementById('slack-distribution').style.display = '';
+    document.getElementById('slack-distribution-link').href = `https://api.slack.com/apps/${slackApp.appId}/distribute`;
   }
 
   function showSlackDone(slackApp, agentName) {
-    document.getElementById('slack-ready').style.display = 'none';
+    document.getElementById('slack-create').style.display = 'none';
+    document.getElementById('slack-token').style.display = 'none';
+    document.getElementById('slack-distribution').style.display = 'none';
     document.getElementById('slack-done').style.display = '';
     document.getElementById('slack-done-name').textContent = agentName + ' Saint';
     document.getElementById('slack-install-url').textContent = slackApp.installUrl;
@@ -1650,7 +1714,7 @@
     }, 2000);
   }
 
-  // Create Slack app button
+  // Sub-step 1: Create Slack app
   document.getElementById('slack-create-btn').addEventListener('click', async () => {
     const btn = document.getElementById('slack-create-btn');
     btn.disabled = true;
@@ -1664,29 +1728,104 @@
         body: JSON.stringify({ setupId: state.setupId }),
       });
 
-      const responseText = await res.text();
-      document.getElementById('slack-error').textContent = `${res.status}: ${responseText.slice(0, 300)}`;
+      let data;
+      try { data = await res.json(); } catch { throw new Error(`Server error (${res.status})`); }
+      if (!res.ok) throw new Error(data.error || 'Failed to create Slack app');
 
-      if (!res.ok) {
-        let parsed;
-        try { parsed = JSON.parse(responseText); } catch {}
-        throw new Error(parsed?.error || `Server error ${res.status}: ${responseText.slice(0, 200)}`);
-      }
-
-      const data = JSON.parse(responseText);
-
-      const { data: setup } = await supabase
-        .from('agent_setups')
-        .select('name')
-        .eq('id', state.setupId)
-        .single();
-
-      document.getElementById('slack-error').textContent = '';
-      showSlackDone(data.slack_app, setup?.name || 'Agent');
+      showSlackTokenStep(data.slack_app);
     } catch (error) {
       btn.disabled = false;
       btn.textContent = 'Create Slack App \u2192';
       document.getElementById('slack-error').textContent = error.message;
+    }
+  });
+
+  // Sub-step 2: Save app token
+  document.getElementById('slack-save-token-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('slack-save-token-btn');
+    const tokenInput = document.getElementById('slack-app-token');
+    const err = document.getElementById('slack-token-error');
+    const appToken = tokenInput.value.trim();
+    err.textContent = '';
+
+    if (!appToken.startsWith('xapp-')) {
+      err.textContent = 'Token must start with xapp-';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div>';
+
+    try {
+      // Fetch current setup to get slack_app data
+      const { data: setup } = await supabase
+        .from('agent_setups')
+        .select('step_data')
+        .eq('id', state.setupId)
+        .single();
+
+      const slackApp = setup?.step_data?.slack_app;
+      if (!slackApp) throw new Error('Slack app not found in setup');
+
+      // Save app token to slack_apps table
+      const res = await fetch('/api/apps', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ appId: slackApp.appId, appToken }),
+      });
+
+      let data;
+      try { data = await res.json(); } catch { throw new Error(`Server error (${res.status})`); }
+      if (!res.ok) throw new Error(data.error || 'Failed to save token');
+
+      // Update step_data with app token
+      const updatedSlackApp = { ...slackApp, appToken };
+      await supabase
+        .from('agent_setups')
+        .update({
+          step_data: { ...setup.step_data, slack_app: updatedSlackApp },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', state.setupId);
+
+      tokenInput.disabled = true;
+      btn.textContent = 'Saved';
+      setTimeout(() => showSlackDistribution(updatedSlackApp), 800);
+    } catch (error) {
+      err.textContent = error.message;
+      btn.disabled = false;
+      btn.textContent = 'Save';
+    }
+  });
+
+  // Sub-step 3: Confirm distribution
+  document.getElementById('slack-confirm-distribution-btn').addEventListener('click', async () => {
+    const btn = document.getElementById('slack-confirm-distribution-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Saving...';
+
+    try {
+      const { data: setup } = await supabase
+        .from('agent_setups')
+        .select('name, step_data')
+        .eq('id', state.setupId)
+        .single();
+
+      const slackApp = { ...setup.step_data.slack_app, distributionConfirmed: true };
+
+      await supabase
+        .from('agent_setups')
+        .update({
+          current_step: 5,
+          step_data: { ...setup.step_data, slack_app: slackApp },
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', state.setupId);
+
+      showSlackDone(slackApp, setup?.name || 'Agent');
+    } catch (error) {
+      btn.disabled = false;
+      btn.textContent = "I've activated public distribution";
     }
   });
 
