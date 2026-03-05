@@ -5,10 +5,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { setupId, gatewayHost, gatewayIp, agentId, workspace, dataDir } = req.body;
+  const { setupId, gatewayHost, gatewayFqdn, agentId, workspace, dataDir } = req.body;
 
-  if (!setupId || !gatewayHost || !gatewayIp || !agentId) {
-    return res.status(400).json({ error: 'setupId, gatewayHost, gatewayIp, and agentId are required' });
+  if (!setupId || !gatewayHost || !gatewayFqdn || !agentId) {
+    return res.status(400).json({ error: 'setupId, gatewayHost, gatewayFqdn, and agentId are required' });
   }
 
   try {
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
           ...setup.step_data,
           gateway: {
             host: gatewayHost,
-            ip: gatewayIp,
+            fqdn: gatewayFqdn,
             agentId,
             workspace: workspace || null,
             dataDir: dataDir || null,

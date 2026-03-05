@@ -2439,7 +2439,7 @@
         body: JSON.stringify({
           setupId: state.setupId,
           gatewayHost: selectedGateway.hostname,
-          gatewayIp: selectedGateway.fqdn,
+          gatewayFqdn: selectedGateway.fqdn,
           agentId: agentData.agent_id,
           workspace: agentData.workspace || null,
           dataDir: agentData.data_dir || null,
@@ -2451,7 +2451,7 @@
 
       showGatewayDone({
         host: selectedGateway.hostname,
-        ip: selectedGateway.fqdn,
+        fqdn: selectedGateway.fqdn,
         agentId: agentData.agent_id,
       });
     } catch (error) {

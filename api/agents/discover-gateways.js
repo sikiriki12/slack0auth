@@ -20,11 +20,10 @@ export default async function handler(req, res) {
 
     const tsData = await tsRes.json();
     const devices = (tsData.devices || [])
-      .filter((d) => d.addresses?.some((a) => /^\d+\.\d+\.\d+\.\d+$/.test(a)))
+      .filter((d) => d.name)
       .map((d) => ({
         hostname: d.hostname || 'unknown',
-        fqdn: d.name || null,
-        addresses: d.addresses.filter((a) => /^\d+\.\d+\.\d+\.\d+$/.test(a)),
+        fqdn: d.name,
       }));
 
     return res.status(200).json({ devices });
