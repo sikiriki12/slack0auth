@@ -2040,29 +2040,59 @@
       // Stream complete — try to extract JSON credentials
       document.getElementById('discord-agent-status').style.display = 'none';
 
-      const jsonMatch = fullText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-      if (jsonMatch) {
+      // Try multiple extraction strategies
+      let creds = null;
+
+      // Strategy 1: fenced code block (greedy — find the last/largest match)
+      const fenceMatches = [...fullText.matchAll(/```(?:json)?\s*\n([\s\S]*?)\n\s*```/g)];
+      for (const m of fenceMatches.reverse()) {
         try {
-          const creds = JSON.parse(jsonMatch[1]);
-          if (creds.applicationId && creds.clientId && creds.clientSecret && creds.botToken) {
-            // Validate and save via API
-            outputEl.textContent += '\n\nCredentials found. Validating...';
-            outputEl.scrollTop = outputEl.scrollHeight;
+          const parsed = JSON.parse(m[1].trim());
+          if (parsed.applicationId && parsed.botToken) { creds = parsed; break; }
+        } catch {}
+      }
 
-            const saveRes = await fetch('/api/agents/create-discord-bot', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ setupId: state.setupId, ...creds }),
-            });
+      // Strategy 2: find a raw JSON object containing our keys anywhere in text
+      if (!creds) {
+        const braceMatches = [...fullText.matchAll(/\{[^{}]*"applicationId"[^{}]*"botToken"[^{}]*\}/g)];
+        for (const m of braceMatches) {
+          try {
+            const parsed = JSON.parse(m[0]);
+            if (parsed.applicationId && parsed.botToken) { creds = parsed; break; }
+          } catch {}
+        }
+      }
 
-            const saveData = await saveRes.json();
-            if (!saveRes.ok) throw new Error(saveData.error || 'Validation failed');
+      // Strategy 3: extract individual values via labeled patterns
+      if (!creds) {
+        const appId = fullText.match(/["`']?applicationId["`']?\s*[:=]\s*["`'](\d+)["`']/)?.[1];
+        const clientId = fullText.match(/["`']?clientId["`']?\s*[:=]\s*["`'](\d+)["`']/)?.[1];
+        const secret = fullText.match(/["`']?clientSecret["`']?\s*[:=]\s*["`']([A-Za-z0-9_-]+)["`']/)?.[1];
+        const token = fullText.match(/["`']?botToken["`']?\s*[:=]\s*["`']([A-Za-z0-9._-]+)["`']/)?.[1];
+        if (appId && token && secret) {
+          creds = { applicationId: appId, clientId: clientId || appId, clientSecret: secret, botToken: token };
+        }
+      }
 
-            showDiscordReview(saveData.discord_bot);
-            return;
-          }
+      if (creds?.applicationId && creds?.clientId && creds?.clientSecret && creds?.botToken) {
+        outputEl.textContent += '\n\nCredentials found. Validating...';
+        outputEl.scrollTop = outputEl.scrollHeight;
+
+        try {
+          const saveRes = await fetch('/api/agents/create-discord-bot', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ setupId: state.setupId, ...creds }),
+          });
+
+          const saveData = await saveRes.json();
+          if (!saveRes.ok) throw new Error(saveData.error || 'Validation failed');
+
+          showDiscordReview(saveData.discord_bot);
+          return;
         } catch (parseErr) {
-          document.getElementById('discord-agent-error').textContent = 'Failed to parse credentials: ' + parseErr.message;
+          showDiscordAgentFallback('Credentials found but validation failed: ' + parseErr.message);
+          return;
         }
       }
 
