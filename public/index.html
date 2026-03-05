@@ -2006,7 +2006,8 @@
               document.getElementById('discord-agent-error').textContent = parsed.error;
               continue;
             }
-            const text = parsed.text || parsed.content || parsed.delta || '';
+            // OpenAI-compatible: choices[0].delta.content
+            const text = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content || '';
             if (text) {
               fullText += text;
               outputEl.textContent = fullText;
@@ -2028,7 +2029,7 @@
         const payload = lineBuf.slice(6);
         try {
           const parsed = JSON.parse(payload);
-          const text = parsed.text || parsed.content || parsed.delta || '';
+          const text = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.message?.content || '';
           if (text) { fullText += text; }
         } catch {
           const text = payload.trim();

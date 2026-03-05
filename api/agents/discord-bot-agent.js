@@ -51,8 +51,11 @@ export default async function handler(req, res) {
         Authorization: `Bearer ${openclawToken}`,
       },
       body: JSON.stringify({
-        system: systemPrompt,
-        prompt: userPrompt,
+        model: 'openclaw',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
         stream: true,
       }),
     });
