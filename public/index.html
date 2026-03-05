@@ -1780,13 +1780,15 @@
 
       // Update step_data with app token
       const updatedSlackApp = { ...slackApp, appToken };
-      await supabase
+      const { error: updateErr } = await supabase
         .from('agent_setups')
         .update({
           step_data: { ...setup.step_data, slack_app: updatedSlackApp },
           updated_at: new Date().toISOString(),
         })
         .eq('id', state.setupId);
+
+      if (updateErr) throw new Error('Failed to save token to setup');
 
       tokenInput.disabled = true;
       btn.textContent = 'Saved';
@@ -1813,7 +1815,7 @@
 
       const slackApp = { ...setup.step_data.slack_app, distributionConfirmed: true };
 
-      await supabase
+      const { error: updateErr } = await supabase
         .from('agent_setups')
         .update({
           current_step: 5,
@@ -1821,6 +1823,8 @@
           updated_at: new Date().toISOString(),
         })
         .eq('id', state.setupId);
+
+      if (updateErr) throw new Error('Failed to save distribution status');
 
       showSlackDone(slackApp, setup?.name || 'Agent');
     } catch (error) {
