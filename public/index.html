@@ -528,7 +528,7 @@
 <div class="container">
   <div class="header">
     <h1>New <span class="highlight">Employee</span></h1>
-    <p>11-step agent setup wizard</p>
+    <p>10-step agent setup wizard</p>
   </div>
 
   <!-- Stepper -->
@@ -1024,12 +1024,51 @@
     </div>
   </div>
 
-  <!-- Step 7: Placeholder -->
-  <div id="step-7-placeholder" class="step">
+  <!-- Step 7: Gateway -->
+  <div id="step-gateway" class="step">
+    <!-- Discover & Select -->
+    <div id="gateway-discover" style="display: none;">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#127760;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Gateway Setup</h2>
+        <p style="font-size: 0.8rem; color: var(--text-dim);">Discover gateways on your network and create an agent</p>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="gateway-discover-btn">Discover Gateways</button>
+      <div id="gateway-discover-error" class="error"></div>
+
+      <div id="gateway-list" style="display: none; margin-top: 1.5rem;">
+        <label>Select a gateway</label>
+        <div id="gateway-cards" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+        <div id="gateway-none" style="display: none; text-align: center; padding: 1.5rem; color: var(--text-dim); font-size: 0.85rem;">
+          No reachable gateways found.
+          <div style="margin-top: 0.75rem;">
+            <button class="btn-sm" id="gateway-retry-btn">Retry</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="gateway-create-btn" disabled style="margin-top: 1.5rem;">Create Agent</button>
+      <div id="gateway-create-error" class="error"></div>
+    </div>
+
+    <!-- Done state -->
+    <div id="gateway-done" style="display: none;">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#9989;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Agent Created on Gateway</h2>
+        <p style="font-size: 0.9rem; color: var(--accent); margin-top: 0.5rem;" id="gateway-done-host"></p>
+        <p style="font-size: 0.8rem; color: var(--text-dim); margin-top: 0.25rem;" id="gateway-done-agent"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 8+: Placeholder for future steps -->
+  <div id="step-placeholder" class="step">
     <div class="placeholder-step">
       <div class="icon">&#129302;</div>
-      <h2>Step 7: AI Account</h2>
-      <p>Coming soon</p>
+      <h2>Coming Soon</h2>
+      <p>This step is not yet implemented</p>
     </div>
   </div>
 </div>
@@ -1052,7 +1091,7 @@
 
   const STEP_LABELS = [
     'Identity', 'Gmail', 'Google Cloud', 'WhatsApp',
-    'Slack', 'Discord', 'AI Account', 'Gateway', 'Config', 'WhatsApp GW', 'Ready'
+    'Slack', 'Discord', 'Gateway', 'Config', 'WhatsApp GW', 'Ready'
   ];
 
   // State
@@ -2138,13 +2177,8 @@
     document.getElementById('discord-done-name').textContent = (agentName || discordBot.name || 'Agent') + ' Saint';
     document.getElementById('discord-done-install-url').textContent = discordBot.installUrl;
 
-    // Auto-advance to step 7 (AI Account placeholder)
-    setTimeout(() => {
-      buildStepper(6);
-      document.getElementById('step-discord').classList.remove('active');
-      document.getElementById('step-7-placeholder').classList.add('active');
-      state.currentStep = 7;
-    }, 2000);
+    // Auto-advance to step 7 (Gateway)
+    setTimeout(() => showGatewayStep(), 2000);
   }
 
   // Auto path button
@@ -2231,6 +2265,202 @@
     }
   });
 
+  // --- Step 7: Gateway ---
+
+  let selectedGateway = null;
+
+  async function showGatewayStep() {
+    buildStepper(6);
+    document.querySelectorAll('.step.active').forEach((s) => s.classList.remove('active'));
+    document.getElementById('step-gateway').classList.add('active');
+    state.currentStep = 7;
+
+    // Reset UI
+    document.getElementById('gateway-discover').style.display = 'none';
+    document.getElementById('gateway-done').style.display = 'none';
+    selectedGateway = null;
+
+    // Fetch setup data
+    const { data: setup } = await supabase
+      .from('agent_setups')
+      .select('name, step_data')
+      .eq('id', state.setupId)
+      .single();
+
+    const gw = setup?.step_data?.gateway;
+    if (gw?.agentId) {
+      showGatewayDone(gw);
+    } else {
+      showGatewayDiscover();
+    }
+  }
+
+  function showGatewayDiscover() {
+    document.getElementById('gateway-discover').style.display = '';
+    document.getElementById('gateway-list').style.display = 'none';
+    document.getElementById('gateway-discover-error').textContent = '';
+    document.getElementById('gateway-create-error').textContent = '';
+    document.getElementById('gateway-create-btn').disabled = true;
+    selectedGateway = null;
+  }
+
+  function showGatewayDone(gw) {
+    document.getElementById('gateway-discover').style.display = 'none';
+    document.getElementById('gateway-done').style.display = '';
+    document.getElementById('gateway-done-host').textContent = gw.host;
+    document.getElementById('gateway-done-agent').textContent = 'Agent: ' + gw.agentId;
+
+    // Auto-advance to next step (Config placeholder)
+    setTimeout(() => {
+      buildStepper(7);
+      document.querySelectorAll('.step.active').forEach((s) => s.classList.remove('active'));
+      document.getElementById('step-placeholder').classList.add('active');
+      state.currentStep = 8;
+    }, 2000);
+  }
+
+  async function discoverGateways() {
+    const btn = document.getElementById('gateway-discover-btn');
+    const err = document.getElementById('gateway-discover-error');
+    err.textContent = '';
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Discovering...';
+
+    try {
+      const res = await fetch('/api/agents/discover-gateways', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ setupId: state.setupId }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Discovery failed');
+
+      document.getElementById('gateway-list').style.display = '';
+      const cardsEl = document.getElementById('gateway-cards');
+      const noneEl = document.getElementById('gateway-none');
+      cardsEl.innerHTML = '';
+      noneEl.style.display = 'none';
+      selectedGateway = null;
+      document.getElementById('gateway-create-btn').disabled = true;
+
+      // Probe each device for reachable gateways via HTTPS + Tailscale FQDN
+      let found = 0;
+      for (const device of data.devices) {
+        if (!device.fqdn) continue;
+        const baseUrl = `https://${device.fqdn}:19223`;
+        try {
+          const healthRes = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(3000) });
+          if (!healthRes.ok) continue;
+
+          let capacity = { available_slots: '?', total_slots: '?' };
+          try {
+            capacity = await fetch(`${baseUrl}/capacity`, { signal: AbortSignal.timeout(3000) }).then((r) => r.json());
+          } catch {}
+
+          found++;
+          const card = document.createElement('div');
+          card.className = 'in-progress-card';
+          card.dataset.fqdn = device.fqdn;
+          card.dataset.hostname = device.hostname;
+          card.innerHTML = `
+            <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;">&#127760;</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 600; font-size: 0.9rem;">${device.hostname}</div>
+              <div style="font-size: 0.75rem; color: var(--text-dim);">${device.fqdn} &middot; ${capacity.available_slots}/${capacity.total_slots} slots available</div>
+            </div>
+            <div class="in-progress-arrow" style="display: none;">&#10003;</div>
+          `;
+          card.addEventListener('click', () => {
+            cardsEl.querySelectorAll('.in-progress-card').forEach((c) => {
+              c.style.borderColor = '';
+              c.querySelector('.in-progress-arrow').style.display = 'none';
+            });
+            card.style.borderColor = 'var(--accent)';
+            card.querySelector('.in-progress-arrow').style.display = '';
+            selectedGateway = { fqdn: device.fqdn, hostname: device.hostname };
+            document.getElementById('gateway-create-btn').disabled = false;
+          });
+          cardsEl.appendChild(card);
+        } catch { /* unreachable or no TLS, skip */ }
+      }
+
+      if (found === 0) {
+        noneEl.style.display = '';
+      }
+    } catch (error) {
+      err.textContent = error.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Discover Gateways';
+    }
+  }
+
+  document.getElementById('gateway-discover-btn').addEventListener('click', discoverGateways);
+  document.getElementById('gateway-retry-btn').addEventListener('click', discoverGateways);
+
+  document.getElementById('gateway-create-btn').addEventListener('click', async () => {
+    if (!selectedGateway) return;
+
+    const btn = document.getElementById('gateway-create-btn');
+    const err = document.getElementById('gateway-create-error');
+    err.textContent = '';
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Creating...';
+
+    try {
+      // Fetch agent name
+      const { data: setup } = await supabase
+        .from('agent_setups')
+        .select('name')
+        .eq('id', state.setupId)
+        .single();
+
+      const agentId = (setup?.name || 'agent').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      // Create agent on gateway via HTTPS + Tailscale FQDN
+      const createRes = await fetch(`https://${selectedGateway.fqdn}:19223/agents`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent_id: agentId }),
+      });
+
+      if (!createRes.ok) {
+        const createData = await createRes.json().catch(() => ({}));
+        throw new Error(createData.detail || createData.error || `Gateway returned ${createRes.status}`);
+      }
+
+      const agentData = await createRes.json();
+
+      // Save to Supabase
+      const saveRes = await fetch('/api/agents/save-gateway', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setupId: state.setupId,
+          gatewayHost: selectedGateway.hostname,
+          gatewayIp: selectedGateway.fqdn,
+          agentId: agentData.agent_id,
+          workspace: agentData.workspace || null,
+          dataDir: agentData.data_dir || null,
+        }),
+      });
+
+      const saveData = await saveRes.json();
+      if (!saveRes.ok) throw new Error(saveData.error || 'Failed to save gateway');
+
+      showGatewayDone({
+        host: selectedGateway.hostname,
+        ip: selectedGateway.fqdn,
+        agentId: agentData.agent_id,
+      });
+    } catch (error) {
+      err.textContent = error.message;
+      btn.disabled = false;
+      btn.textContent = 'Create Agent';
+    }
+  });
+
   // Update continue handler for in-progress cards
   function continueSetup(setupId, step) {
     state.setupId = setupId;
@@ -2245,9 +2475,11 @@
       showSlackStep();
     } else if (step === 6) {
       showDiscordStep();
-    } else if (step >= 7) {
+    } else if (step === 7) {
+      showGatewayStep();
+    } else if (step >= 8) {
       buildStepper(step);
-      document.getElementById('step-7-placeholder').classList.add('active');
+      document.getElementById('step-placeholder').classList.add('active');
       state.currentStep = step + 1;
     }
   }
