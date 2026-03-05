@@ -1,6 +1,6 @@
 import { supabase } from '../../lib/supabase.js';
 
-export const config = { maxDuration: 300 };
+export const config = { maxDuration: 600 };
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
