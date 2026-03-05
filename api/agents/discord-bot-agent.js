@@ -42,17 +42,32 @@ export default async function handler(req, res) {
 
 Steps:
 Step 1: Navigate to https://discord.com/developers/applications
-Step 2: If not logged in, fill email field with ${discordEmail}, password field with ${discordPassword}, click Log In
-Step 3: Click "New Application", name it "${botName}", accept TOS, click Create
-Step 4: Note the Application ID from the URL or General Information page
-Step 5: Click "Bot" in the left sidebar
-Step 6: Enable: Presence Intent, Server Members Intent, Message Content Intent
-Step 7: Click Save Changes
-Step 8: Click Reset Token, confirm, copy the token
-Step 9: Click "OAuth2" in the left sidebar
-Step 10: Note the Client ID
-Step 11: Click Reset Secret, confirm, copy the secret
-Step 12: Return ONLY a JSON code block with: applicationId, clientId, clientSecret, botToken`;
+Step 2: If login page appears, fill email and password, click Log In
+Step 3: If hCaptcha appears, click the checkbox
+Step 4: Click "New Application"
+Step 5: Type the bot name in the name field
+Step 6: Check the TOS/agreement checkbox
+Step 7: Click "Create"
+Step 8: If hCaptcha appears again, solve it
+Step 9: Note the Application ID from General Information page
+Step 10: Click "Bot" in the left sidebar
+Step 11: If there's an "Add Bot" button, click it and confirm
+Step 12: Verify "Public Bot" is checked under Authorization Flow
+Step 13: Scroll down to Privileged Gateway Intents
+Step 14: Enable Presence Intent
+Step 15: Enable Server Members Intent
+Step 16: Enable Message Content Intent
+Step 17: Click "Save Changes"
+Step 18: Click "Reset Token"
+Step 19: If MFA password dialog appears, enter the password and submit
+Step 20: Copy the bot token
+Step 21: Click "OAuth2" in the left sidebar
+Step 22: Note the Client ID
+Step 23: Click "Reset Secret"
+Step 24: If confirmation dialog appears, click "Yes, do it!"
+Step 25: If MFA password dialog appears, enter the password and submit
+Step 26: Copy the client secret
+Step 27: Return ONLY a JSON code block: {"applicationId":"...","clientId":"...","clientSecret":"...","botToken":"..."}`;
 
     // Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
