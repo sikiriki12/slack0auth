@@ -68,15 +68,24 @@ export default async function handler(req, res) {
       return;
     }
 
-    // Pipe SSE stream from OpenClaw to client
+    // Pipe SSE stream from OpenClaw to client with keepalive
     const reader = openclawRes.body.getReader();
     const decoder = new TextDecoder();
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      const chunk = decoder.decode(value, { stream: true });
-      res.write(chunk);
+    // Send SSE comment every 10s to keep Vercel/browser connection alive
+    const keepalive = setInterval(() => {
+      res.write(': keepalive\n\n');
+    }, 10_000);
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        res.write(chunk);
+      }
+    } finally {
+      clearInterval(keepalive);
     }
 
     res.end();
