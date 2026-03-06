@@ -2652,6 +2652,23 @@
       }
 
       const qrData = await qrRes.json();
+
+      // Already linked — skip QR, go straight to save
+      if (!qrData.qr_data_url && qrData.message && qrData.message.includes('already linked')) {
+        setStatus('Saving...');
+        const saveRes = await fetch('/api/agents/save-whatsapp-gw', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ setupId: state.setupId }),
+        });
+        if (!saveRes.ok) {
+          const saveData = await saveRes.json().catch(() => ({}));
+          throw new Error(saveData.error || 'Failed to save WhatsApp GW');
+        }
+        showWhatsAppGWDone();
+        return;
+      }
+
       qrEl.src = qrData.qr_data_url;
       qrEl.style.display = '';
       instructionsEl.style.display = '';
