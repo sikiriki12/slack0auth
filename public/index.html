@@ -2665,6 +2665,10 @@
 
         if (waitRes.ok) {
           const waitData = await waitRes.json();
+          const msg = waitData.message || '';
+          if (msg.includes('failed') || msg.includes('not available') || msg.includes('No active')) {
+            throw new Error(msg);
+          }
           if (waitData.connected) {
             // Save to Supabase
             setStatus('Saving...');
