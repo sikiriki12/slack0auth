@@ -1063,7 +1063,42 @@
     </div>
   </div>
 
-  <!-- Step 8+: Placeholder for future steps -->
+  <!-- Step 8: WhatsApp GW -->
+  <div id="step-whatsapp-gw" class="step">
+    <div id="whatsapp-gw-connect">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#128279;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Connect WhatsApp</h2>
+        <p style="font-size: 0.875rem; color: var(--text-dim);">Link WhatsApp to the gateway agent</p>
+      </div>
+
+      <div style="display: flex; justify-content: center; margin-bottom: 1rem;">
+        <img id="whatsapp-gw-qr" style="display: none; max-width: 280px; border-radius: 12px; border: 1px solid var(--border);">
+      </div>
+
+      <p id="whatsapp-gw-status" style="text-align: center; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 1rem;">
+        <span style="display: inline-flex; align-items: center; gap: 0.5rem;">
+          <span class="spinner"></span> Initializing...
+        </span>
+      </p>
+
+      <div id="whatsapp-gw-error" class="error" style="margin-bottom: 1rem;"></div>
+
+      <button class="btn btn-primary btn-full" id="whatsapp-gw-retry-btn" style="display: none;">
+        Retry
+      </button>
+    </div>
+
+    <div id="whatsapp-gw-done" style="display: none;">
+      <div style="text-align: center; margin-bottom: 2rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#9989;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">WhatsApp Connected</h2>
+        <p style="font-size: 0.875rem; color: var(--text-dim);">Gateway is linked to WhatsApp</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 9+: Placeholder for future steps -->
   <div id="step-placeholder" class="step">
     <div class="placeholder-step">
       <div class="icon">&#129302;</div>
@@ -1091,7 +1126,7 @@
 
   const STEP_LABELS = [
     'Identity', 'Gmail', 'Google Cloud', 'WhatsApp',
-    'Slack', 'Discord', 'Gateway', 'Config', 'WhatsApp GW', 'Ready'
+    'Slack', 'Discord', 'Gateway', 'WhatsApp GW', 'Config', 'Ready'
   ];
 
   // State
@@ -2310,12 +2345,9 @@
     document.getElementById('gateway-done-host').textContent = gw.host;
     document.getElementById('gateway-done-agent').textContent = 'Agent: ' + gw.agentId;
 
-    // Auto-advance to next step (Config placeholder)
+    // Auto-advance to WhatsApp GW step
     setTimeout(() => {
-      buildStepper(7);
-      document.querySelectorAll('.step.active').forEach((s) => s.classList.remove('active'));
-      document.getElementById('step-placeholder').classList.add('active');
-      state.currentStep = 8;
+      showWhatsAppGWStep();
     }, 2000);
   }
 
@@ -2498,6 +2530,142 @@
     }
   });
 
+  // ── WhatsApp GW Step ──
+
+  async function showWhatsAppGWStep() {
+    buildStepper(7);
+    document.querySelectorAll('.step.active').forEach((s) => s.classList.remove('active'));
+    document.getElementById('step-whatsapp-gw').classList.add('active');
+    state.currentStep = 8;
+
+    // Reset UI
+    document.getElementById('whatsapp-gw-connect').style.display = '';
+    document.getElementById('whatsapp-gw-done').style.display = 'none';
+
+    // Fetch setup data
+    const { data: setup } = await supabase
+      .from('agent_setups')
+      .select('step_data')
+      .eq('id', state.setupId)
+      .single();
+
+    if (setup?.step_data?.whatsapp_gw?.connectedAt) {
+      showWhatsAppGWDone();
+    } else {
+      showWhatsAppGWConnect(setup?.step_data?.gateway);
+    }
+  }
+
+  async function showWhatsAppGWConnect(gw) {
+    if (!gw?.fqdn || !gw?.agentId) {
+      document.getElementById('whatsapp-gw-error').textContent = 'Gateway data missing. Please complete the Gateway step first.';
+      document.getElementById('whatsapp-gw-status').style.display = 'none';
+      return;
+    }
+
+    const base = `https://${gw.fqdn}`;
+    const agentId = gw.agentId;
+    const statusEl = document.getElementById('whatsapp-gw-status');
+    const qrEl = document.getElementById('whatsapp-gw-qr');
+    const errEl = document.getElementById('whatsapp-gw-error');
+    const retryBtn = document.getElementById('whatsapp-gw-retry-btn');
+
+    function setStatus(msg) {
+      statusEl.innerHTML = `<span style="display: inline-flex; align-items: center; gap: 0.5rem;"><span class="spinner"></span> ${msg}</span>`;
+      statusEl.style.display = '';
+    }
+
+    function showError(msg) {
+      errEl.textContent = msg;
+      statusEl.style.display = 'none';
+      qrEl.style.display = 'none';
+      retryBtn.style.display = '';
+    }
+
+    retryBtn.onclick = () => {
+      errEl.textContent = '';
+      retryBtn.style.display = 'none';
+      showWhatsAppGWConnect(gw);
+    };
+
+    try {
+      // Step 1: Create WhatsApp link
+      setStatus('Creating WhatsApp link...');
+      const linkRes = await fetch(`${base}/agents/${agentId}/links`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'whatsapp', account_id: agentId }),
+      });
+
+      if (!linkRes.ok && linkRes.status !== 409) {
+        const linkErr = await linkRes.json().catch(() => ({}));
+        throw new Error(linkErr.detail || linkErr.error || `Failed to create link (${linkRes.status})`);
+      }
+
+      // Step 2+3: QR loop — get QR, wait for scan, retry on timeout
+      while (true) {
+        setStatus('Loading QR code...');
+        const qrRes = await fetch(`${base}/agents/${agentId}/links/whatsapp/${agentId}/login/start`, {
+          method: 'POST',
+        });
+
+        if (!qrRes.ok) {
+          const qrErr = await qrRes.json().catch(() => ({}));
+          throw new Error(qrErr.detail || qrErr.error || `Failed to get QR code (${qrRes.status})`);
+        }
+
+        const qrData = await qrRes.json();
+        qrEl.src = qrData.qr_code;
+        qrEl.style.display = '';
+        setStatus('Scan the QR code with WhatsApp...');
+
+        // Wait for scan (60s timeout on server)
+        const waitRes = await fetch(`${base}/agents/${agentId}/links/whatsapp/${agentId}/login/wait`, {
+          method: 'POST',
+        });
+
+        if (!waitRes.ok) {
+          const waitErr = await waitRes.json().catch(() => ({}));
+          throw new Error(waitErr.detail || waitErr.error || `Wait failed (${waitRes.status})`);
+        }
+
+        const waitData = await waitRes.json();
+        if (waitData.connected) {
+          // Save to Supabase
+          setStatus('Saving...');
+          qrEl.style.display = 'none';
+          const saveRes = await fetch('/api/agents/save-whatsapp-gw', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ setupId: state.setupId }),
+          });
+          if (!saveRes.ok) {
+            const saveErr = await saveRes.json().catch(() => ({}));
+            throw new Error(saveErr.error || 'Failed to save WhatsApp GW');
+          }
+          showWhatsAppGWDone();
+          return;
+        }
+        // connected: false → timeout, loop back for fresh QR
+      }
+    } catch (error) {
+      showError(error.message);
+    }
+  }
+
+  function showWhatsAppGWDone() {
+    document.getElementById('whatsapp-gw-connect').style.display = 'none';
+    document.getElementById('whatsapp-gw-done').style.display = '';
+
+    // Auto-advance to placeholder (Config step)
+    setTimeout(() => {
+      buildStepper(8);
+      document.querySelectorAll('.step.active').forEach((s) => s.classList.remove('active'));
+      document.getElementById('step-placeholder').classList.add('active');
+      state.currentStep = 9;
+    }, 2000);
+  }
+
   // Update continue handler for in-progress cards
   function continueSetup(setupId, step) {
     state.setupId = setupId;
@@ -2514,7 +2682,9 @@
       showDiscordStep();
     } else if (step === 7) {
       showGatewayStep();
-    } else if (step >= 8) {
+    } else if (step === 8) {
+      showWhatsAppGWStep();
+    } else if (step >= 9) {
       buildStepper(step);
       document.getElementById('step-placeholder').classList.add('active');
       state.currentStep = step + 1;
