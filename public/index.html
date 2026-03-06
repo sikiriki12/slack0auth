@@ -2640,58 +2640,52 @@
         throw new Error(linkData.detail || linkData.error || `Failed to create link (${linkRes.status})`);
       }
 
-      // Step 2+3: QR loop — get QR, wait for scan, retry on timeout
-      while (true) {
-        setStatus('Loading QR code...');
-        const qrRes = await fetch(`${base}/agents/${agentId}/links/whatsapp/${agentId}/login/start`, {
+      // Step 2: Get QR code
+      setStatus('Loading QR code...');
+      const qrRes = await fetch(`${base}/agents/${agentId}/links/whatsapp/${agentId}/login/start`, {
+        method: 'POST',
+      });
+
+      if (!qrRes.ok) {
+        const qrData = await qrRes.json().catch(() => ({}));
+        throw new Error(qrData.detail || qrData.error || `Failed to get QR code (${qrRes.status})`);
+      }
+
+      const qrData = await qrRes.json();
+      qrEl.src = qrData.qr_data_url;
+      qrEl.style.display = '';
+      instructionsEl.style.display = '';
+      setStatus('Waiting for WhatsApp scan...');
+
+      // Step 3: Poll wait — proxy times out at ~10s, so retry up to 30 times (~5 min)
+      for (let attempt = 0; attempt < 30; attempt++) {
+        const waitRes = await fetch(`${base}/agents/${agentId}/links/whatsapp/${agentId}/login/wait`, {
           method: 'POST',
         });
 
-        if (!qrRes.ok) {
-          const qrData = await qrRes.json().catch(() => ({}));
-          throw new Error(qrData.detail || qrData.error || `Failed to get QR code (${qrRes.status})`);
-        }
-
-        const qrData = await qrRes.json();
-        qrEl.src = qrData.qr_data_url;
-        qrEl.style.display = '';
-        instructionsEl.style.display = '';
-        setStatus('Waiting for WhatsApp scan...');
-
-        // Poll wait endpoint — proxy may timeout at ~10s, so retry up to 6 times (~60s total)
-        let connected = false;
-        for (let attempt = 0; attempt < 6; attempt++) {
-          const waitRes = await fetch(`${base}/agents/${agentId}/links/whatsapp/${agentId}/login/wait`, {
-            method: 'POST',
-          });
-
-          if (waitRes.ok) {
-            const waitData = await waitRes.json();
-            if (waitData.connected) { connected = true; break; }
-            // connected: false means server-side timeout, keep polling
+        if (waitRes.ok) {
+          const waitData = await waitRes.json();
+          if (waitData.connected) {
+            // Save to Supabase
+            setStatus('Saving...');
+            qrEl.style.display = 'none';
+            instructionsEl.style.display = 'none';
+            const saveRes = await fetch('/api/agents/save-whatsapp-gw', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ setupId: state.setupId }),
+            });
+            if (!saveRes.ok) {
+              const saveData = await saveRes.json().catch(() => ({}));
+              throw new Error(saveData.error || 'Failed to save WhatsApp GW');
+            }
+            showWhatsAppGWDone();
+            return;
           }
-          // 502/timeout from proxy — retry silently
         }
-
-        if (connected) {
-          // Save to Supabase
-          setStatus('Saving...');
-          qrEl.style.display = 'none';
-          instructionsEl.style.display = 'none';
-          const saveRes = await fetch('/api/agents/save-whatsapp-gw', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ setupId: state.setupId }),
-          });
-          if (!saveRes.ok) {
-            const saveData = await saveRes.json().catch(() => ({}));
-            throw new Error(saveData.error || 'Failed to save WhatsApp GW');
-          }
-          showWhatsAppGWDone();
-          return;
-        }
-        // connected: false → timeout, loop back for fresh QR
+        // 502/timeout or connected:false — retry silently
       }
+      throw new Error('WhatsApp scan timed out after 5 minutes. Please try again.');
     } catch (error) {
       showError(error.message);
     }
