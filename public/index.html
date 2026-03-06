@@ -2632,7 +2632,7 @@
       const linkRes = await fetch(`${base}/agents/${agentId}/links`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'whatsapp', account_id: agentId }),
+        body: JSON.stringify({ channel_type: 'whatsapp', account_id: agentId }),
       });
 
       if (!linkRes.ok && linkRes.status !== 409) {
