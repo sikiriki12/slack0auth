@@ -2663,30 +2663,35 @@
           method: 'POST',
         });
 
-        if (waitRes.ok) {
-          const waitData = await waitRes.json();
-          if (!waitData.connected && waitData.message) {
-            throw new Error(waitData.message);
-          }
-          if (waitData.connected) {
-            // Save to Supabase
-            setStatus('Saving...');
-            qrEl.style.display = 'none';
-            instructionsEl.style.display = 'none';
-            const saveRes = await fetch('/api/agents/save-whatsapp-gw', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ setupId: state.setupId }),
-            });
-            if (!saveRes.ok) {
-              const saveData = await saveRes.json().catch(() => ({}));
-              throw new Error(saveData.error || 'Failed to save WhatsApp GW');
-            }
-            showWhatsAppGWDone();
-            return;
-          }
+        if (waitRes.status === 502) continue; // proxy timeout — retry silently
+
+        if (!waitRes.ok) {
+          const errData = await waitRes.json().catch(() => ({}));
+          throw new Error(errData.detail || errData.error || `Wait failed (${waitRes.status})`);
         }
-        // 502/timeout or connected:false — retry silently
+
+        const waitData = await waitRes.json();
+        if (!waitData.connected && waitData.message) {
+          throw new Error(waitData.message);
+        }
+        if (waitData.connected) {
+          // Save to Supabase
+          setStatus('Saving...');
+          qrEl.style.display = 'none';
+          instructionsEl.style.display = 'none';
+          const saveRes = await fetch('/api/agents/save-whatsapp-gw', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ setupId: state.setupId }),
+          });
+          if (!saveRes.ok) {
+            const saveData = await saveRes.json().catch(() => ({}));
+            throw new Error(saveData.error || 'Failed to save WhatsApp GW');
+          }
+          showWhatsAppGWDone();
+          return;
+        }
+        // connected:false with no message — keep polling
       }
       throw new Error('WhatsApp scan timed out after 5 minutes. Please try again.');
     } catch (error) {
