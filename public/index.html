@@ -2658,18 +2658,22 @@
         instructionsEl.style.display = '';
         setStatus('Waiting for WhatsApp scan...');
 
-        // Wait for scan (60s timeout on server)
-        const waitRes = await fetch(`${base}/agents/${agentId}/links/whatsapp/${agentId}/login/wait`, {
-          method: 'POST',
-        });
+        // Poll wait endpoint — proxy may timeout at ~10s, so retry up to 6 times (~60s total)
+        let connected = false;
+        for (let attempt = 0; attempt < 6; attempt++) {
+          const waitRes = await fetch(`${base}/agents/${agentId}/links/whatsapp/${agentId}/login/wait`, {
+            method: 'POST',
+          });
 
-        if (!waitRes.ok) {
-          const waitData = await waitRes.json().catch(() => ({}));
-          throw new Error(waitData.detail || waitData.error || `Wait failed (${waitRes.status})`);
+          if (waitRes.ok) {
+            const waitData = await waitRes.json();
+            if (waitData.connected) { connected = true; break; }
+            // connected: false means server-side timeout, keep polling
+          }
+          // 502/timeout from proxy — retry silently
         }
 
-        const waitData = await waitRes.json();
-        if (waitData.connected) {
+        if (connected) {
           // Save to Supabase
           setStatus('Saving...');
           qrEl.style.display = 'none';
