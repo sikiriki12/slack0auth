@@ -2653,7 +2653,7 @@
         }
 
         const qrData = await qrRes.json();
-        qrEl.src = qrData.qr_code;
+        qrEl.src = qrData.qr_data_url;
         qrEl.style.display = '';
         instructionsEl.style.display = '';
         setStatus('Waiting for WhatsApp scan...');
