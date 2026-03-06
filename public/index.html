@@ -1112,6 +1112,28 @@
       </button>
     </div>
 
+    <!-- Already linked screen -->
+    <div id="whatsapp-gw-already-linked" style="display: none;">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#128279;</div>
+        <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Already Linked?</h2>
+        <p id="whatsapp-gw-already-msg" style="font-size: 0.85rem; color: var(--text-mid); margin-top: 0.75rem;"></p>
+      </div>
+
+      <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.8rem; color: var(--text-mid); line-height: 1.6;">
+        This connection might already be linked. Check the phone or gateway to confirm. If you're not sure, relink to get a fresh QR code.
+      </div>
+
+      <div style="display: flex; gap: 0.75rem;">
+        <button class="btn btn-primary" id="whatsapp-gw-relink-btn" style="flex: 1; background: transparent; border: 1px solid var(--border); color: var(--text-mid);">
+          Relink
+        </button>
+        <button class="btn btn-primary" id="whatsapp-gw-continue-btn" style="flex: 1;">
+          Continue
+        </button>
+      </div>
+    </div>
+
     <!-- Done screen -->
     <div id="whatsapp-gw-done" style="display: none;">
       <div style="text-align: center; margin-bottom: 2rem;">
@@ -2652,6 +2674,38 @@
       }
 
       const qrData = await qrRes.json();
+
+      // Already linked — show confirmation screen
+      if (!qrData.qr_data_url && qrData.message && qrData.message.includes('already linked')) {
+        document.getElementById('whatsapp-gw-connect').style.display = 'none';
+        const alreadyEl = document.getElementById('whatsapp-gw-already-linked');
+        alreadyEl.style.display = '';
+        document.getElementById('whatsapp-gw-already-msg').textContent = qrData.message;
+
+        document.getElementById('whatsapp-gw-continue-btn').onclick = async () => {
+          setStatus('Saving...');
+          alreadyEl.style.display = 'none';
+          document.getElementById('whatsapp-gw-connect').style.display = '';
+          const saveRes = await fetch('/api/agents/save-whatsapp-gw', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ setupId: state.setupId }),
+          });
+          if (!saveRes.ok) {
+            const saveData = await saveRes.json().catch(() => ({}));
+            showError(saveData.error || 'Failed to save WhatsApp GW');
+            return;
+          }
+          showWhatsAppGWDone();
+        };
+
+        document.getElementById('whatsapp-gw-relink-btn').onclick = () => {
+          alreadyEl.style.display = 'none';
+          document.getElementById('whatsapp-gw-prepare').style.display = '';
+        };
+        return;
+      }
+
       qrEl.src = qrData.qr_data_url;
       qrEl.style.display = '';
       instructionsEl.style.display = '';
