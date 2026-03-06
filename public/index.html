@@ -2682,14 +2682,8 @@
             showWhatsAppGWDone();
             return;
           }
-          // Login failed or ended — stop polling immediately
-          const msg = waitData.message || '';
-          if (msg.includes('failed') || msg.includes('not available') || msg.includes('No active')) {
-            throw new Error(msg);
-          }
         }
-        // 502/timeout — retry after a short delay to avoid rapid-fire
-        await new Promise((r) => setTimeout(r, 2000));
+        // 502/timeout or connected:false — retry silently
       }
       throw new Error('WhatsApp scan timed out after 5 minutes. Please try again.');
     } catch (error) {
