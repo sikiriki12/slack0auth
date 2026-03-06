@@ -2353,10 +2353,15 @@
           const healthRes = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(3000) });
           if (!healthRes.ok) continue;
 
-          let capacity = { available_slots: '?', total_slots: '?' };
+          let capacity = {};
           try {
             capacity = await fetch(`${baseUrl}/capacity`, { signal: AbortSignal.timeout(3000) }).then((r) => r.json());
           } catch {}
+
+          const agents = capacity.agents_provisioned ?? '?';
+          const memPct = capacity.host?.memory_percent != null ? Math.round(capacity.host.memory_percent) + '% mem' : '';
+          const cpuPct = capacity.host?.cpu_percent != null ? Math.round(capacity.host.cpu_percent) + '% cpu' : '';
+          const stats = [agents + ' agents', memPct, cpuPct].filter(Boolean).join(' \u00b7 ');
 
           found++;
           const card = document.createElement('div');
@@ -2367,7 +2372,7 @@
             <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;">&#127760;</div>
             <div style="flex: 1; min-width: 0;">
               <div style="font-weight: 600; font-size: 0.9rem;">${device.hostname}</div>
-              <div style="font-size: 0.75rem; color: var(--text-dim);">${device.fqdn} &middot; ${capacity.available_slots}/${capacity.total_slots} slots available</div>
+              <div style="font-size: 0.75rem; color: var(--text-dim);">${device.fqdn} \u00b7 ${stats}</div>
             </div>
             <div class="in-progress-arrow" style="display: none;">&#10003;</div>
           `;
