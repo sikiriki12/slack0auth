@@ -2348,7 +2348,7 @@
       let found = 0;
       for (const device of data.devices) {
         if (!device.fqdn) continue;
-        const baseUrl = `https://${device.fqdn}:19223`;
+        const baseUrl = `https://${device.fqdn}`;
         try {
           const healthRes = await fetch(`${baseUrl}/health`, { signal: AbortSignal.timeout(3000) });
           if (!healthRes.ok) continue;
@@ -2421,10 +2421,10 @@
         .eq('id', state.setupId)
         .single();
 
-      const agentId = (setup?.name || 'agent').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const agentId = (setup?.name || 'agent').toLowerCase().replace(/[^a-z0-9]/g, '') + '-saint';
 
       // Create agent on gateway via HTTPS + Tailscale FQDN
-      const createRes = await fetch(`https://${selectedGateway.fqdn}:19223/agents`, {
+      const createRes = await fetch(`https://${selectedGateway.fqdn}/agents`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agent_id: agentId }),
