@@ -2414,20 +2414,24 @@
     btn.innerHTML = '<div class="spinner"></div> Creating...';
 
     try {
-      // Fetch agent name
+      // Fetch full setup data for agent creation + secrets
       const { data: setup } = await supabase
         .from('agent_setups')
-        .select('name')
+        .select('name, step_data')
         .eq('id', state.setupId)
         .single();
 
-      const agentId = (setup?.name || 'agent').toLowerCase().replace(/[^a-z0-9]/g, '') + '-saint';
+      const agentName = setup?.name || 'agent';
+      const agentId = agentName.toLowerCase().replace(/[^a-z0-9]/g, '') + '-saint';
+      const saintName = agentName + ' Saint';
+      const gwBase = `https://${selectedGateway.fqdn}`;
 
       // Create agent on gateway via HTTPS + Tailscale FQDN
-      const createRes = await fetch(`https://${selectedGateway.fqdn}/agents`, {
+      btn.innerHTML = '<div class="spinner"></div> Creating agent...';
+      const createRes = await fetch(`${gwBase}/agents`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agent_id: agentId }),
+        body: JSON.stringify({ agent_id: agentId, saint_name: saintName }),
       });
 
       if (!createRes.ok) {
@@ -2437,7 +2441,35 @@
 
       const agentData = await createRes.json();
 
+      // Store secrets on gateway (6 calls, 1 per secret)
+      btn.innerHTML = '<div class="spinner"></div> Setting secrets...';
+      const secretsUrl = `${gwBase}/agents/${agentData.agent_id}/secrets`;
+      const sd = setup?.step_data || {};
+      const oauthClient = sd.google_oauth_client?.web || sd.google_oauth_client?.installed || {};
+
+      const secrets = [
+        { key: 'SAINT_EMAIL', value: sd.email || '', is_visible_to_user: true },
+        { key: 'SAINT_PASSWORD', value: sd.email_password || '', is_visible_to_user: true },
+        { key: 'SAINT_PHONE', value: sd.phone_number || '', is_visible_to_user: true },
+        { key: 'SAINT_GOOGLE_REFRESH_TOKEN', value: sd.google_oauth_token?.refresh_token || '', is_visible_to_user: true },
+        { key: 'GOOGLE_CLIENT_ID', value: oauthClient.client_id || '', is_visible_to_user: false },
+        { key: 'GOOGLE_CLIENT_SECRET', value: oauthClient.client_secret || '', is_visible_to_user: false },
+      ];
+
+      for (const secret of secrets) {
+        const secRes = await fetch(secretsUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(secret),
+        });
+        if (!secRes.ok) {
+          const secData = await secRes.json().catch(() => ({}));
+          throw new Error(`Failed to set ${secret.key}: ${secData.detail || secData.error || secRes.status}`);
+        }
+      }
+
       // Save to Supabase
+      btn.innerHTML = '<div class="spinner"></div> Saving...';
       const saveRes = await fetch('/api/agents/save-gateway', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
