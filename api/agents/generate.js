@@ -1,4 +1,6 @@
 import { supabase } from '../../lib/supabase.js';
+import { readdir, readFile } from 'fs/promises';
+import { join } from 'path';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -62,20 +64,17 @@ Respond in JSON only: {"name": "...", "personality": "..."}`;
       personality = parsed.personality;
     }
 
-    // Pick 4 random employee avatars as style reference
-    const withAvatars = employees.filter((e) => e.avatar_url);
-    const shuffled = withAvatars.sort(() => Math.random() - 0.5);
-    const referenceEmployees = shuffled.slice(0, 4);
+    // Pick 4 random example images from local folder as style reference
+    const examplesDir = join(process.cwd(), 'public', 'image_examples');
+    const allFiles = (await readdir(examplesDir)).filter((f) => f.endsWith('.png'));
+    const shuffled = allFiles.sort(() => Math.random() - 0.5);
+    const selectedFiles = shuffled.slice(0, 4);
 
-    // Download reference images as base64
     const referenceImages = await Promise.all(
-      referenceEmployees.map(async (emp) => {
+      selectedFiles.map(async (file) => {
         try {
-          const imgRes = await fetch(emp.avatar_url);
-          const buffer = await imgRes.arrayBuffer();
-          const base64 = Buffer.from(buffer).toString('base64');
-          const contentType = imgRes.headers.get('content-type') || 'image/jpeg';
-          return { base64, mimeType: contentType };
+          const buffer = await readFile(join(examplesDir, file));
+          return { base64: buffer.toString('base64'), mimeType: 'image/png' };
         } catch {
           return null;
         }
@@ -89,18 +88,20 @@ Respond in JSON only: {"name": "...", "personality": "..."}`;
       inlineData: { mimeType: ref.mimeType, data: ref.base64 },
     }));
 
-    const imagePrompt = `Here are ${validRefs.length} example profile photos of existing AI employees. Study their style carefully.
+    const imagePrompt = `Here are ${validRefs.length} example profile photos of existing AI employees. Study their style carefully — the rendering technique, lighting, and overall feel.
 
-Generate a NEW profile photo for a ${gender} AI employee that matches this EXACT style:
-- 3D cartoon / Pixar-style rendered character
-- Head and shoulders portrait, looking at camera, friendly expression
-- Solid colored background (pick a DIFFERENT color than the examples — be creative)
-- Casual clothing (hoodie, jacket, sweater, etc.)
-- Ethnically diverse — make this character look DIFFERENT from the examples
-- Same high-quality 3D render style, same lighting approach
-- Square aspect ratio, profile photo framing
+Generate a NEW profile photo for a ${gender} AI employee that matches this EXACT rendering style:
+- 3D cartoon / Pixar-style character with slightly stylized proportions (slightly oversized head, large expressive eyes with detailed iris reflections)
+- Soft matte skin with subsurface scattering — NOT glossy or plastic-looking
+- Warm front-left key light with subtle rim light, same lighting approach as the examples
+- Chest-up portrait, slight angle, looking at camera with a warm friendly expression
+- Solid muted gradient background — choose a color NOT used in any of the reference images
+- Visible fabric texture and detail on clothing
+- Square aspect ratio
 
-IMPORTANT: Match the 3D cartoon style exactly. Do NOT generate a photorealistic image.`;
+This character must look distinctly different from the reference examples. Be bold and creative — give them a completely different hairstyle, different clothing style, and different accessories. Avoid repeating any outfit, hairstyle, or color scheme from the examples.
+
+IMPORTANT: Match the 3D cartoon rendering style exactly. Do NOT generate a photorealistic image.`;
 
     const imageRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image-preview:generateContent?key=${process.env.GEMINI_API_KEY}`,
