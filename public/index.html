@@ -1175,11 +1175,14 @@
   }
 </script>
 <script type="module">
-  import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-
-  // Fetch public config from server (env-driven, not hardcoded)
-  const config = await fetch('/api/config').then((r) => r.json());
-  const supabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
+  async function api(path) {
+    const res = await fetch(path);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `API error ${res.status}`);
+    }
+    return res.json();
+  }
 
   const STEP_LABELS = [
     'Identity', 'Gmail', 'Google Cloud', 'WhatsApp',
@@ -1220,11 +1223,7 @@
 
   // Load in-progress setups
   async function loadInProgress() {
-    const { data } = await supabase
-      .from('agent_setups')
-      .select('id, name, avatar_url, current_step, tier')
-      .eq('status', 'in_progress')
-      .order('updated_at', { ascending: false });
+    const data = await api('/api/agents/in-progress');
 
     if (!data || data.length === 0) return;
 
@@ -1335,18 +1334,12 @@
 
     nameTimer = setTimeout(async () => {
       try {
-        const [empRes, setupRes] = await Promise.all([
-          supabase.from('employees').select('name').ilike('name', name.trim()),
-          supabase.from('agent_setups').select('name').ilike('name', name.trim()).eq('status', 'in_progress'),
-        ]);
+        const { available } = await api(`/api/agents/check-name?name=${encodeURIComponent(name.trim())}`);
+        state.nameAvailable = available;
 
-        const taken = (empRes.data?.length || 0) > 0 || (setupRes.data?.length || 0) > 0;
-        state.nameAvailable = !taken;
-
-        if (taken) {
+        if (!available) {
           status.textContent = 'taken';
           status.className = 'name-status taken';
-          state.nameAvailable = false;
         } else {
           status.textContent = 'available';
           status.className = 'name-status available';
@@ -1546,11 +1539,7 @@
     state.currentStep = 2;
 
     // Fetch setup data for the suggested email
-    const { data: setup } = await supabase
-      .from('agent_setups')
-      .select('name, step_data')
-      .eq('id', state.setupId)
-      .single();
+    const setup = await api(`/api/agents/setup?id=${state.setupId}`);
 
     // If email already created, show done state
     if (setup?.step_data?.email) {
@@ -1669,11 +1658,7 @@
     document.getElementById('gcloud-done').style.display = 'none';
 
     // Fetch setup data
-    const { data: setup } = await supabase
-      .from('agent_setups')
-      .select('step_data')
-      .eq('id', state.setupId)
-      .single();
+    const setup = await api(`/api/agents/setup?id=${state.setupId}`);
 
     // If already authorized, show done and advance
     if (setup?.step_data?.google_oauth_token) {
@@ -1711,11 +1696,7 @@
     btn.innerHTML = '<div class="spinner"></div> Saving...';
 
     try {
-      const { data: setup } = await supabase
-        .from('agent_setups')
-        .select('step_data')
-        .eq('id', state.setupId)
-        .single();
+      const setup = await api(`/api/agents/setup?id=${state.setupId}`);
 
       const res = await fetch('/api/agents/save-phone', {
         method: 'POST',
@@ -1770,11 +1751,7 @@
   function startGCloudPolling() {
     if (gcloudPollTimer) clearInterval(gcloudPollTimer);
     gcloudPollTimer = setInterval(async () => {
-      const { data: setup } = await supabase
-        .from('agent_setups')
-        .select('step_data')
-        .eq('id', state.setupId)
-        .single();
+      const setup = await api(`/api/agents/setup?id=${state.setupId}`);
 
       if (setup?.step_data?.google_oauth_token) {
         clearInterval(gcloudPollTimer);
@@ -1805,11 +1782,7 @@
     document.getElementById('whatsapp-done').style.display = 'none';
 
     // Fetch setup data
-    const { data: setup } = await supabase
-      .from('agent_setups')
-      .select('name, step_data')
-      .eq('id', state.setupId)
-      .single();
+    const setup = await api(`/api/agents/setup?id=${state.setupId}`);
 
     const agentName = setup?.name || 'Agent';
 
@@ -1869,11 +1842,7 @@
       if (!res.ok) throw new Error(data.error || 'Failed to complete');
 
       // Fetch name for done state
-      const { data: setup } = await supabase
-        .from('agent_setups')
-        .select('name')
-        .eq('id', state.setupId)
-        .single();
+      const setup = await api(`/api/agents/setup?id=${state.setupId}`);
 
       const agentName = setup?.name || 'Agent';
 
@@ -1908,11 +1877,7 @@
     document.getElementById('slack-done').style.display = 'none';
 
     // Fetch setup data
-    const { data: setup } = await supabase
-      .from('agent_setups')
-      .select('name, step_data')
-      .eq('id', state.setupId)
-      .single();
+    const setup = await api(`/api/agents/setup?id=${state.setupId}`);
 
     const agentName = setup?.name || 'Agent';
     const slackApp = setup?.step_data?.slack_app;
@@ -1998,11 +1963,7 @@
 
     try {
       // Fetch current setup to get slack_app data
-      const { data: setup } = await supabase
-        .from('agent_setups')
-        .select('step_data')
-        .eq('id', state.setupId)
-        .single();
+      const setup = await api(`/api/agents/setup?id=${state.setupId}`);
 
       const slackApp = setup?.step_data?.slack_app;
       if (!slackApp) throw new Error('Slack app not found in setup');
@@ -2047,11 +2008,7 @@
       if (!res.ok) throw new Error(data.error || 'Failed to save distribution status');
 
       // Fetch updated setup for done state
-      const { data: setup } = await supabase
-        .from('agent_setups')
-        .select('name, step_data')
-        .eq('id', state.setupId)
-        .single();
+      const setup = await api(`/api/agents/setup?id=${state.setupId}`);
 
       showSlackDone(setup.step_data.slack_app, setup?.name || 'Agent');
     } catch (error) {
@@ -2076,11 +2033,7 @@
     document.getElementById('discord-done').style.display = 'none';
 
     // Fetch setup data
-    const { data: setup } = await supabase
-      .from('agent_setups')
-      .select('name, step_data')
-      .eq('id', state.setupId)
-      .single();
+    const setup = await api(`/api/agents/setup?id=${state.setupId}`);
 
     const agentName = setup?.name || 'Agent';
     const discordBot = setup?.step_data?.discord_bot;
@@ -2343,11 +2296,7 @@
       if (!res.ok) throw new Error(data.error || 'Failed to confirm');
 
       // Fetch updated setup for done state
-      const { data: setup } = await supabase
-        .from('agent_setups')
-        .select('name, step_data')
-        .eq('id', state.setupId)
-        .single();
+      const setup = await api(`/api/agents/setup?id=${state.setupId}`);
 
       showDiscordDone(setup.step_data.discord_bot, setup?.name || 'Agent');
     } catch (error) {
@@ -2373,11 +2322,7 @@
     selectedGateway = null;
 
     // Fetch setup data
-    const { data: setup } = await supabase
-      .from('agent_setups')
-      .select('name, step_data')
-      .eq('id', state.setupId)
-      .single();
+    const setup = await api(`/api/agents/setup?id=${state.setupId}`);
 
     const gw = setup?.step_data?.gateway;
     if (gw?.agentId) {
@@ -2504,11 +2449,7 @@
 
     try {
       // Fetch full setup data for agent creation + secrets
-      const { data: setup } = await supabase
-        .from('agent_setups')
-        .select('name, step_data')
-        .eq('id', state.setupId)
-        .single();
+      const setup = await api(`/api/agents/setup?id=${state.setupId}`);
 
       const agentName = setup?.name || 'agent';
       const agentId = agentName.toLowerCase().replace(/[^a-z0-9]/g, '') + '-saint';
@@ -2603,11 +2544,7 @@
     document.getElementById('whatsapp-gw-done').style.display = 'none';
 
     // Fetch setup data
-    const { data: setup } = await supabase
-      .from('agent_setups')
-      .select('step_data')
-      .eq('id', state.setupId)
-      .single();
+    const setup = await api(`/api/agents/setup?id=${state.setupId}`);
 
     whatsappGWGateway = setup?.step_data?.gateway || null;
 
@@ -2782,11 +2719,7 @@
     document.getElementById('step-register').classList.add('active');
     state.currentStep = 9;
 
-    const { data: setup } = await supabase
-      .from('agent_setups')
-      .select('*')
-      .eq('id', state.setupId)
-      .single();
+    const setup = await api(`/api/agents/setup?id=${state.setupId}`);
 
     if (setup?.status === 'completed') {
       showRegisterDone();
