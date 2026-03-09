@@ -528,7 +528,7 @@
 <div class="container">
   <div class="header">
     <h1>New <span class="highlight">Employee</span></h1>
-    <p>10-step agent setup wizard</p>
+    <p>9-step agent setup wizard</p>
   </div>
 
   <!-- Stepper -->
@@ -1144,12 +1144,22 @@
     </div>
   </div>
 
-  <!-- Step 9+: Placeholder for future steps -->
-  <div id="step-placeholder" class="step">
-    <div class="placeholder-step">
-      <div class="icon">&#129302;</div>
-      <h2>Coming Soon</h2>
-      <p>This step is not yet implemented</p>
+  <!-- Step 9: Register Agent -->
+  <div id="step-register" class="step">
+    <div id="register-confirm" style="display: none;">
+      <div style="text-align: center; margin-bottom: 1.5rem;">
+        <img id="register-avatar" src="" alt="" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--accent); margin-bottom: 1rem;">
+        <h2 id="register-name" style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;"></h2>
+        <p id="register-personality" style="font-size: 0.875rem; color: var(--text-mid); margin-bottom: 0.5rem;"></p>
+        <span id="register-tier" style="display: inline-block; font-size: 0.7rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; padding: 0.25rem 0.75rem; border-radius: 999px; background: var(--accent-dim); color: var(--accent);"></span>
+      </div>
+      <button class="btn btn-primary btn-full" id="register-btn">Register Employee</button>
+      <div id="register-error" class="error-msg" style="display: none;"></div>
+    </div>
+    <div id="register-done" style="display: none; text-align: center;">
+      <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">&#9989;</div>
+      <h2 style="font-weight: 600; font-size: 1.25rem; margin-bottom: 0.25rem;">Employee Registered</h2>
+      <p style="font-size: 0.875rem; color: var(--text-dim);">Redirecting to home&hellip;</p>
     </div>
   </div>
 </div>
@@ -1172,7 +1182,7 @@
 
   const STEP_LABELS = [
     'Identity', 'Gmail', 'Google Cloud', 'WhatsApp',
-    'Slack', 'Discord', 'Gateway', 'WhatsApp GW', 'Config', 'Ready'
+    'Slack', 'Discord', 'Gateway', 'WhatsApp GW', 'Register'
   ];
 
   // State
@@ -2758,13 +2768,76 @@
     document.getElementById('whatsapp-gw-connect').style.display = 'none';
     document.getElementById('whatsapp-gw-done').style.display = '';
 
-    // Auto-advance to placeholder (Config step)
+    // Auto-advance to Register step
     setTimeout(() => {
-      buildStepper(8);
-      document.querySelectorAll('.step.active').forEach((s) => s.classList.remove('active'));
-      document.getElementById('step-placeholder').classList.add('active');
-      state.currentStep = 9;
+      showRegisterStep();
     }, 2000);
+  }
+
+  // Register step
+  async function showRegisterStep() {
+    buildStepper(8);
+    document.querySelectorAll('.step.active').forEach((s) => s.classList.remove('active'));
+    document.getElementById('step-register').classList.add('active');
+    state.currentStep = 9;
+
+    const { data: setup } = await supabase
+      .from('agent_setups')
+      .select('*')
+      .eq('id', state.setupId)
+      .single();
+
+    if (setup?.status === 'completed') {
+      showRegisterDone();
+    } else {
+      showRegisterConfirm(setup);
+    }
+  }
+
+  function showRegisterConfirm(setup) {
+    document.getElementById('register-confirm').style.display = '';
+    document.getElementById('register-done').style.display = 'none';
+
+    if (setup.avatar_url) {
+      document.getElementById('register-avatar').src = setup.avatar_url;
+      document.getElementById('register-avatar').alt = setup.name;
+    }
+    document.getElementById('register-name').textContent = setup.name;
+    document.getElementById('register-personality').textContent = setup.personality;
+    document.getElementById('register-tier').textContent = setup.tier;
+
+    document.getElementById('register-btn').onclick = async () => {
+      const btn = document.getElementById('register-btn');
+      const errEl = document.getElementById('register-error');
+      btn.disabled = true;
+      btn.textContent = 'Registering…';
+      errEl.style.display = 'none';
+
+      try {
+        const resp = await fetch('/api/agents/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ setupId: state.setupId }),
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || 'Registration failed');
+        showRegisterDone();
+      } catch (error) {
+        errEl.textContent = error.message;
+        errEl.style.display = '';
+        btn.disabled = false;
+        btn.textContent = 'Register Employee';
+      }
+    };
+  }
+
+  function showRegisterDone() {
+    document.getElementById('register-confirm').style.display = 'none';
+    document.getElementById('register-done').style.display = '';
+
+    setTimeout(() => {
+      window.location.reload();
+    }, 3000);
   }
 
   // Update continue handler for in-progress cards
@@ -2786,9 +2859,7 @@
     } else if (step === 8) {
       showWhatsAppGWStep();
     } else if (step >= 9) {
-      buildStepper(step);
-      document.getElementById('step-placeholder').classList.add('active');
-      state.currentStep = step + 1;
+      showRegisterStep();
     }
   }
 </script>
