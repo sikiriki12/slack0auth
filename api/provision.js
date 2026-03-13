@@ -32,10 +32,12 @@ export default async function handler(req, res) {
   const createData = await createRes.json();
 
   if (!createData.ok) {
+    console.error(`[provision] Manifest create failed (name: ${name}):`, createData.error, createData.errors);
     return res.status(400).json({ error: createData.error, details: createData.errors });
   }
 
   const { app_id, credentials } = createData;
+  console.log(`[provision] App created (appId: ${app_id}, clientId: ${credentials.client_id}, name: ${name})`);
 
   const installUrl = `https://slack.com/oauth/v2/authorize?client_id=${credentials.client_id}&scope=${SCOPES.join(',')}&redirect_uri=${encodeURIComponent(redirectUrl)}&state=${app_id}`;
 
@@ -53,11 +55,11 @@ export default async function handler(req, res) {
     .insert(appData);
 
   if (insertError) {
-    console.error('Failed to store Slack app:', insertError);
+    console.error(`[provision] Failed to store app in slack_apps (appId: ${app_id}):`, insertError.message);
     return res.status(500).json({ error: 'Failed to store app data' });
   }
 
-  console.log(`Provisioned app: ${name} (${app_id})`);
+  console.log(`[provision] Complete (appId: ${app_id}, name: ${name})`);
 
   // Return camelCase for API consumers
   return res.status(200).json({

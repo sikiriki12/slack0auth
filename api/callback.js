@@ -9,6 +9,7 @@ export async function completeOAuth(code, appId) {
     .single();
 
   if (error || !appData) {
+    console.error(`[callback] App not found (appId: ${appId}):`, error?.message);
     throw new Error(`App ${appId} not found`);
   }
 
@@ -24,6 +25,13 @@ export async function completeOAuth(code, appId) {
   });
 
   const data = await response.json();
+
+  if (!data.ok) {
+    console.error(`[callback] OAuth token exchange failed (appId: ${appId}):`, data.error);
+    throw new Error(`OAuth exchange failed: ${data.error}`);
+  }
+
+  console.log(`[callback] OAuth exchange succeeded (appId: ${appId}, team: ${data.team.id} "${data.team.name}", installer: ${data.authed_user.id})`);
 
   // Send welcome DM to the installer — makes bot appear in sidebar instantly
   await fetch('https://slack.com/api/chat.postMessage', {
@@ -51,10 +59,10 @@ export async function completeOAuth(code, appId) {
     .eq('app_id', appId);
 
   if (updateError) {
-    console.error('Failed to update app with install data:', updateError);
+    console.error(`[callback] Failed to store install data (appId: ${appId}):`, updateError.message);
   }
 
-  console.log(`New install: ${data.team.name} | App: ${appData.name} | Token: ${data.access_token}`);
+  console.log(`[callback] Install complete (appId: ${appId}, team: ${data.team.name}, app: ${appData.name})`);
 
   return { ...appData, bot_token: data.access_token, team_id: data.team.id, team_name: data.team.name };
 }
