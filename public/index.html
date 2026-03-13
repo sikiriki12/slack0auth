@@ -957,13 +957,19 @@
       <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.8rem; color: var(--text-mid); line-height: 1.6;">
         <strong style="color: var(--text); display: block; margin-bottom: 0.5rem;">Instructions:</strong>
         1. Go to <a href="https://discord.com/developers/applications" target="_blank" rel="noopener" style="color: var(--accent);">Discord Developer Portal</a><br>
-        2. Click <strong style="color: var(--text);">New Application</strong> &rarr; name it <strong style="color: var(--accent);" id="discord-manual-bot-name"></strong><br>
-        3. Go to <strong style="color: var(--text);">Bot</strong> tab &rarr; click <strong style="color: var(--text);">Add Bot</strong><br>
-        4. Under <strong style="color: var(--text);">Privileged Gateway Intents</strong>, enable:<br>
+        2. Click <strong style="color: var(--text);">New Application</strong> &rarr; name it <strong style="color: var(--accent);" id="discord-manual-bot-name"></strong> <span class="copy-icon" onclick="copyText(this, 'discord-manual-bot-name')">&#128203;</span><br>
+        3. Click <strong style="color: var(--text);">App Icon</strong> (<strong style="color: var(--accent);" id="discord-manual-initials"></strong>) &rarr; choose image and upload<br>
+        <div id="discord-manual-avatar-section" style="display: none; text-align: center; margin: 0.75rem 0;">
+          <img id="discord-manual-avatar" src="" alt="Bot avatar" style="width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border);">
+          <br>
+          <button class="btn-sm" id="discord-manual-avatar-download" style="margin-top: 0.5rem;">Save avatar</button>
+        </div>
+        4. Go to <strong style="color: var(--text);">Bot</strong> tab &rarr; click <strong style="color: var(--text);">Add Bot</strong><br>
+        5. Under <strong style="color: var(--text);">Privileged Gateway Intents</strong>, enable:<br>
         &nbsp;&nbsp;&bull; Presence Intent<br>
         &nbsp;&nbsp;&bull; Server Members Intent<br>
         &nbsp;&nbsp;&bull; Message Content Intent<br>
-        5. Under <strong style="color: var(--text);">Authorization Flow</strong>, ensure <strong style="color: var(--text);">Public Bot</strong> is checked
+        6. Under <strong style="color: var(--text);">Authorization Flow</strong>, ensure <strong style="color: var(--text);">Public Bot</strong> is checked
       </div>
 
       <div class="field">
@@ -2038,6 +2044,8 @@
 
     const agentName = setup?.name || 'Agent';
     const discordBot = setup?.step_data?.discord_bot;
+    state.discordAvatarUrl = setup?.avatar_url || '';
+    state.discordBotName = agentName + ' Saint';
 
     // Resume logic
     if (discordBot?.confirmed) {
@@ -2046,7 +2054,7 @@
       showDiscordReview(discordBot);
     } else {
       document.getElementById('discord-choose').style.display = '';
-      document.getElementById('discord-manual-bot-name').textContent = agentName + ' Saint';
+      document.getElementById('discord-manual-bot-name').textContent = state.discordBotName;
     }
   }
 
@@ -2197,13 +2205,24 @@
     fallbackBtn.textContent = 'Switch to manual setup';
     fallbackBtn.href = '#';
     fallbackBtn.style.cssText = 'color: var(--accent); text-decoration: underline; cursor: pointer;';
-    fallbackBtn.addEventListener('click', (e) => { e.preventDefault(); showDiscordManual(); });
+    fallbackBtn.addEventListener('click', (e) => { e.preventDefault(); showDiscordManual(state.discordAvatarUrl, state.discordBotName); });
     errEl.appendChild(fallbackBtn);
   }
 
-  function showDiscordManual() {
+  function showDiscordManual(avatarUrl, botName) {
     document.getElementById('discord-choose').style.display = 'none';
     document.getElementById('discord-manual').style.display = '';
+
+    const initials = (botName || '').split(/\s+/).map(w => w[0]).join('').toUpperCase();
+    document.getElementById('discord-manual-initials').textContent = initials;
+
+    const avatarSection = document.getElementById('discord-manual-avatar-section');
+    if (avatarUrl) {
+      document.getElementById('discord-manual-avatar').src = avatarUrl;
+      avatarSection.style.display = '';
+    } else {
+      avatarSection.style.display = 'none';
+    }
   }
 
   function showDiscordReview(discordBot) {
@@ -2231,7 +2250,7 @@
   document.getElementById('discord-auto-btn').addEventListener('click', () => showDiscordAgent());
 
   // Manual path button
-  document.getElementById('discord-manual-btn').addEventListener('click', () => showDiscordManual());
+  document.getElementById('discord-manual-btn').addEventListener('click', () => showDiscordManual(state.discordAvatarUrl, state.discordBotName));
 
   // Manual: enable save button when all fields filled
   function updateDiscordManualBtn() {
@@ -2244,6 +2263,15 @@
 
   ['discord-application-id', 'discord-client-id', 'discord-client-secret', 'discord-bot-token'].forEach((id) => {
     document.getElementById(id).addEventListener('input', updateDiscordManualBtn);
+  });
+
+  document.getElementById('discord-manual-avatar-download').addEventListener('click', () => {
+    const img = document.getElementById('discord-manual-avatar');
+    if (!img.src) return;
+    const a = document.createElement('a');
+    a.href = img.src;
+    a.download = (state.discordBotName || 'avatar') + '.png';
+    a.click();
   });
 
   // Manual: validate & save
