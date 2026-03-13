@@ -2269,7 +2269,22 @@
     const img = document.getElementById('discord-manual-avatar');
     if (!img.src) return;
     const resp = await fetch(img.src);
-    const blob = await resp.blob();
+    let blob = await resp.blob();
+
+    const MAX_SIZE = 2 * 1024 * 1024;
+    if (blob.size > MAX_SIZE) {
+      const bmp = await createImageBitmap(blob);
+      let scale = Math.sqrt(MAX_SIZE / blob.size) * 0.9;
+      let w = Math.round(bmp.width * scale);
+      let h = Math.round(bmp.height * scale);
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
+      bmp.close();
+      blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    }
+
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = (state.discordBotName || 'avatar') + '.png';
