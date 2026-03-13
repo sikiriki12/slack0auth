@@ -2265,13 +2265,16 @@
     document.getElementById(id).addEventListener('input', updateDiscordManualBtn);
   });
 
-  document.getElementById('discord-manual-avatar-download').addEventListener('click', () => {
+  document.getElementById('discord-manual-avatar-download').addEventListener('click', async () => {
     const img = document.getElementById('discord-manual-avatar');
     if (!img.src) return;
+    const resp = await fetch(img.src);
+    const blob = await resp.blob();
     const a = document.createElement('a');
-    a.href = img.src;
+    a.href = URL.createObjectURL(blob);
     a.download = (state.discordBotName || 'avatar') + '.png';
     a.click();
+    URL.revokeObjectURL(a.href);
   });
 
   // Manual: validate & save
